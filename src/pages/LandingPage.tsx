@@ -7,6 +7,12 @@ import {
 } from 'lucide-react';
 import { PublicHeader } from '../components/marketplace/PublicHeader';
 
+const HERO_SLIDES = [
+  'https://growmoneydigital.com.br/barberflow/01.jpg',
+  'https://growmoneydigital.com.br/barberflow/02.jpg',
+  'https://growmoneydigital.com.br/barberflow/03.jpg',
+];
+
 // ── Typewriter phrases ──────────────────────────────────────────────
 
 const TYPEWRITER_PHRASES = [
@@ -114,6 +120,15 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
 
 export const LandingPage: React.FC = () => {
   const typedText = useTypewriter(TYPEWRITER_PHRASES, 70, 35, 2400);
+  const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setCurrentHeroSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 4500);
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   return (
     <div className="marketplace-shell min-h-screen overflow-x-hidden bg-[#070707] font-sans text-slate-100 selection:bg-lime-400 selection:text-black">
@@ -123,6 +138,21 @@ export const LandingPage: React.FC = () => {
           HERO SECTION
           ═══════════════════════════════════════════════════════ */}
       <section className="relative pb-16 pt-24 sm:pb-20 sm:pt-28 lg:pb-28 lg:pt-40">
+        <div className="absolute inset-0 overflow-hidden">
+          {HERO_SLIDES.map((image, index) => (
+            <div
+              key={image}
+              aria-hidden="true"
+              className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-[1400ms] ease-in-out ${
+                index === currentHeroSlide ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ backgroundImage: `url(${image})` }}
+            />
+          ))}
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,7,7,0.55)_0%,rgba(7,7,7,0.22)_35%,rgba(7,7,7,0.72)_100%)]" />
+        </div>
+
         {/* Gradient orbs */}
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] md:w-[700px] md:h-[700px] bg-lime-400/15 blur-[150px] rounded-full pointer-events-none" />
         <div className="absolute top-2/3 right-0 w-[300px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
