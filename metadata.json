@@ -1,0 +1,7 @@
+{
+  "name": "BarberClaw",
+  "description": "SaaS para Barbearias com agendamento e Visagismo via IA (Gemini) para recomendação de cortes baseada no formato do rosto.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
