@@ -283,7 +283,8 @@ export const MapboxNavigator: React.FC<MapboxNavigatorProps> = ({ barbershop, cl
         <MapPin className="w-12 h-12 text-lime-400/50 mx-auto mb-4" />
         <h3 className="text-xl font-bold text-white mb-2">Mapa Indisponível</h3>
         <p className="text-slate-400 text-sm">
-          Adicione o token do Mapbox em <code className="bg-black/50 px-2 py-0.5 rounded text-lime-400">.env</code>
+          Defina <code className="bg-black/50 px-2 py-0.5 rounded text-lime-400">VITE_MAPBOX_TOKEN</code> com token
+          público <code className="bg-black/50 px-2 py-0.5 rounded text-lime-400">pk.</code> no `.env` local ou na Netlify.
         </p>
       </div>
     );

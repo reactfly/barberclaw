@@ -22,9 +22,20 @@ View your app in AI Studio: https://ai.studio/apps/358c8ec4-0ab1-4e4e-8d93-d22eb
 
 ## Deploy
 
-For AWS Amplify or any CI/CD provider, configure these environment variables in the deployment settings instead of committing them to Git:
+### Netlify (recomendado)
+
+1. Em `Site configuration > Environment variables`, adicione:
+   - `VITE_MAPBOX_TOKEN` (token publico Mapbox iniciado por `pk.`)
+   - `GEMINI_API_KEY` (opcional)
+2. Faça um novo deploy (`Trigger deploy > Deploy site`).
+3. O arquivo `netlify.toml` ja esta configurado para:
+   - buildar com `npm run build`
+   - publicar `dist`
+   - aplicar redirect SPA para `index.html`
+
+### AWS Amplify
+
+Use o `amplify.yml` deste repositório e configure no painel:
 
 - `VITE_MAPBOX_TOKEN`
-- `GEMINI_API_KEY` (optional)
-
-The `amplify.yml` build already reads these variables and writes them to `.env.production` during deploy.
+- `GEMINI_API_KEY` (opcional)

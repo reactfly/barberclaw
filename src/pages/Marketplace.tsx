@@ -712,7 +712,9 @@ export const Marketplace: React.FC = () => {
                   </div>
                   <h3 className="marketplace-fluid-section mt-5 text-white">Ative o mapa interativo</h3>
                   <p className="marketplace-copy mt-3 max-w-md text-sm text-slate-400">
-                    Configure o token do Mapbox no arquivo <code className="rounded bg-black/40 px-2 py-1 text-lime-300">.env</code> para exibir rotas, pins e distancias em tempo real.
+                    Configure <code className="rounded bg-black/40 px-2 py-1 text-lime-300">VITE_MAPBOX_TOKEN</code> (token
+                    publico <code className="rounded bg-black/40 px-2 py-1 text-lime-300">pk.</code>) no ambiente local/.env
+                    ou no painel da Netlify para exibir rotas, pins e distancias em tempo real.
                   </p>
                 </div>
               )}

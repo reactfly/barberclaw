@@ -2,7 +2,27 @@
  * Mapbox Service - Core utilities for maps, routing, and geolocation
  */
 
-const MAPBOX_TOKEN = () => import.meta.env.VITE_MAPBOX_TOKEN || '';
+const normalizeEnvValue = (value: unknown): string => {
+  if (typeof value !== 'string') return '';
+  return value.trim().replace(/^['"]|['"]$/g, '');
+};
+
+const isLikelyPublicMapboxToken = (token: string): boolean => token.startsWith('pk.');
+
+const MAPBOX_TOKEN = () => {
+  const token = normalizeEnvValue(import.meta.env.VITE_MAPBOX_TOKEN);
+
+  if (!token) return '';
+
+  if (!isLikelyPublicMapboxToken(token)) {
+    console.warn(
+      'Mapbox token invalido: configure VITE_MAPBOX_TOKEN com um token publico iniciado por "pk.".'
+    );
+    return '';
+  }
+
+  return token;
+};
 
 // ── Types ──────────────────────────────────────────────────────────────
 
