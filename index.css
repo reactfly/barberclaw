@@ -1,17 +1,109 @@
+@import url('https://fonts.googleapis.com/css2?family=Tulpen+One&family=Saira+Extra+Condensed:wght@300;400;500;600;700;800&family=Economica:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-[#0f1115] text-slate-100 font-sans font-light antialiased overflow-x-hidden;
+    @apply bg-[#0a0a0a] text-slate-100 font-sans antialiased overflow-x-hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Standardizing form element weights for better readability */
   input, select, textarea, button {
     @apply font-sans;
+  }
+
+  /* ── Saira Extra Condensed: base body font ── */
+  .marketplace-shell,
+  .marketplace-shell input,
+  .marketplace-shell select,
+  .marketplace-shell textarea {
+    font-family: 'Saira Extra Condensed', system-ui, sans-serif;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Tulpen One: display/hero titles ── */
+  .marketplace-shell h1,
+  .marketplace-shell h2,
+  .marketplace-shell h3,
+  .marketplace-shell .marketplace-display {
+    font-family: 'Tulpen One', cursive;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    line-height: 0.92;
+    text-transform: uppercase;
+  }
+
+  /* ── Economica: buttons, menus, nav, labels, kickers ── */
+  .marketplace-shell button,
+  .marketplace-shell a,
+  .marketplace-shell .marketplace-kicker,
+  .marketplace-shell .marketplace-label,
+  .marketplace-shell .marketplace-nav-link {
+    font-family: 'Economica', sans-serif;
+    letter-spacing: 0.06em;
+  }
+
+  .marketplace-shell .marketplace-kicker,
+  .marketplace-shell .marketplace-label {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  /* ── Body paragraphs: Saira Extra Condensed (override links inside) ── */
+  .marketplace-shell p,
+  .marketplace-shell .marketplace-copy {
+    font-family: 'Saira Extra Condensed', system-ui, sans-serif;
+    letter-spacing: 0.01em;
+    line-height: 1.55;
+  }
+
+  .marketplace-shell .marketplace-fluid-hero {
+    font-size: clamp(2.9rem, 12vw, 7rem);
+    line-height: 0.88;
+  }
+
+  .marketplace-shell .marketplace-fluid-title {
+    font-size: clamp(2.35rem, 8.6vw, 5.1rem);
+    line-height: 0.9;
+  }
+
+  .marketplace-shell .marketplace-fluid-section {
+    font-size: clamp(2rem, 7vw, 3.35rem);
+    line-height: 0.92;
+  }
+
+  .marketplace-shell .marketplace-fluid-card {
+    font-size: clamp(1.5rem, 5vw, 2.3rem);
+    line-height: 0.95;
+  }
+
+  .marketplace-shell .marketplace-fluid-stat {
+    font-size: clamp(1.7rem, 6vw, 3.4rem);
+    line-height: 0.94;
+  }
+
+  .marketplace-shell .marketplace-safe-bottom {
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (min-width: 640px) {
+  @layer base {
+    .marketplace-shell button,
+    .marketplace-shell a,
+    .marketplace-shell .marketplace-kicker,
+    .marketplace-shell .marketplace-label,
+    .marketplace-shell .marketplace-nav-link {
+      letter-spacing: 0.08em;
+    }
+
+    .marketplace-shell .marketplace-kicker,
+    .marketplace-shell .marketplace-label {
+      letter-spacing: 0.2em;
+    }
   }
 }
 
@@ -79,6 +171,17 @@
     to { transform: rotate(360deg); }
   }
 
+  @keyframes slide-in-top {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
   .animate-fade-in-up { animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .animate-fade-in-left { animation: fade-in-left 0.6s ease-out forwards; }
@@ -87,6 +190,18 @@
   .animate-scan { animation: scan 2s linear infinite; }
   .animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
   .animate-spin-slow { animation: spin-slow 8s linear infinite; }
+  .animate-slide-in-top { animation: slide-in-top 0.3s ease-out forwards; }
+}
+
+/* ── Typewriter Cursor ──────────────────────────────────────────────── */
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typewriter-cursor {
+  animation: blink-cursor 0.75s step-end infinite;
 }
 
 .perspective-1000 {
@@ -101,4 +216,261 @@
 
 @keyframes draw {
   to { stroke-dashoffset: 0; }
+}
+
+/* ── Mapbox Custom Marker Styles ──────────────────────────────────── */
+
+.mapbox-shop-marker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 12px rgba(163, 230, 53, 0.3));
+}
+
+.mapbox-shop-marker .marker-pulse {
+  position: absolute;
+  bottom: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(163, 230, 53, 0.2);
+  animation: marker-pulse-anim 2s ease-out infinite;
+}
+
+@keyframes marker-pulse-anim {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.mapbox-shop-marker .marker-icon {
+  width: 40px;
+  height: 40px;
+  background: #a3e635;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #000;
+  position: relative;
+  z-index: 2;
+}
+
+.mapbox-shop-marker .marker-icon svg {
+  transform: rotate(45deg);
+  color: #000;
+}
+
+.mapbox-shop-marker .marker-label {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(163, 230, 53, 0.3);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.mapbox-shop-marker:hover .marker-label {
+  opacity: 1;
+}
+
+/* User location marker */
+.mapbox-user-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mapbox-user-marker .user-pulse {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.25);
+  animation: user-pulse-anim 2s ease-out infinite;
+}
+
+@keyframes user-pulse-anim {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.mapbox-user-marker .user-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 3px solid white;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Mapbox GL overrides ──────────────────────────────────────────── */
+
+.mapboxgl-ctrl-bottom-left {
+  opacity: 0.5;
+}
+
+.mapboxgl-ctrl-bottom-left:hover {
+  opacity: 1;
+}
+
+.mapboxgl-ctrl-group {
+  background: rgba(24, 24, 27, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.mapboxgl-ctrl-group button {
+  width: 36px !important;
+  height: 36px !important;
+  border: none !important;
+}
+
+.mapboxgl-ctrl-group button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.mapboxgl-ctrl-group button + button {
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.mapboxgl-ctrl-group button .mapboxgl-ctrl-icon {
+  filter: invert(1);
+}
+
+.mapboxgl-ctrl-attrib a {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* ── Marketplace Marker Styles ───────────────────────────────────── */
+
+.marketplace-marker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.45));
+  transform-origin: center bottom;
+}
+
+.marketplace-marker:hover,
+.marketplace-marker.marker-active {
+  transform: scale(1.14);
+  z-index: 10 !important;
+}
+
+.marketplace-marker.marker-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.marketplace-marker.marker-featured .mkt-marker-inner {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 28px rgba(163, 230, 53, 0.24);
+}
+
+.mkt-marker-badge {
+  position: absolute;
+  bottom: calc(100% + 42px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.88);
+  color: #f8fafc;
+  padding: 4px 9px;
+  font-family: 'Economica', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.mkt-marker-inner {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(180deg, #c9ff5d 0%, #a3e635 52%, #7cb518 100%);
+  border-radius: 18px 18px 18px 4px;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #000;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.mkt-marker-inner svg {
+  transform: rotate(45deg);
+}
+
+.marketplace-marker:hover .mkt-marker-inner,
+.marketplace-marker.marker-active .mkt-marker-inner {
+  background: linear-gradient(180deg, #d8ff7f 0%, #b4ec51 54%, #7cb518 100%);
+  box-shadow: 0 0 24px rgba(163, 230, 53, 0.42);
+}
+
+.mkt-marker-label {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  white-space: nowrap;
+  background: rgba(7, 7, 7, 0.92);
+  color: white;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-family: 'Economica', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border: 1px solid rgba(163, 230, 53, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  transform: translateY(6px);
+  backdrop-filter: blur(10px);
+}
+
+.marketplace-marker:hover .mkt-marker-badge,
+.marketplace-marker.marker-active .mkt-marker-badge {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.marketplace-marker:hover .mkt-marker-label,
+.marketplace-marker.marker-active .mkt-marker-label {
+  transform: translateY(0);
 }
