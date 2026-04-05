@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Scissors, Mail, Lock, User, Store } from 'lucide-react';
+import { Lock, Mail, Scissors, Store, User } from 'lucide-react';
+import { AuthBackground } from '../components/auth/AuthBackground';
 
 export const Register: React.FC = () => {
   const [role, setRole] = useState<'CUSTOMER' | 'OWNER'>('CUSTOMER');
@@ -8,6 +9,7 @@ export const Register: React.FC = () => {
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (role === 'OWNER') {
       navigate('/onboarding');
     } else {
@@ -16,98 +18,101 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-slate-100 font-sans flex flex-col">
-      <header className="px-6 py-4 border-b border-white/10">
-        <Link to="/" className="flex items-center gap-2 w-fit">
-          <Scissors className="w-6 h-6 text-lime-400" />
-          <h1 className="text-xl font-bold tracking-tight">
-            Barber<span className="text-lime-400 font-normal">Flow</span>
+    <div className="marketplace-shell relative flex min-h-screen flex-col overflow-hidden bg-[#0a0a0a] text-slate-100">
+      <AuthBackground />
+
+      <header className="relative z-10 border-b border-white/10 bg-black/20 px-4 py-4 backdrop-blur-md sm:px-6">
+        <Link to="/" className="flex w-fit items-center gap-2">
+          <Scissors className="h-6 w-6 text-lime-400" />
+          <h1 className="marketplace-display text-xl font-bold tracking-tight text-white">
+            Barber<span className="font-normal text-lime-400">Flow</span>
           </h1>
         </Link>
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl animate-fade-in-up">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-2">Criar Conta</h2>
-            <p className="text-slate-400">Junte-se à revolução das barbearias</p>
+      <main className="relative z-10 flex flex-1 items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-md animate-fade-in-up rounded-3xl border border-white/10 bg-black/45 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+          <div className="mb-8 text-center">
+            <h2 className="marketplace-fluid-title mb-2 text-white">Criar Conta</h2>
+            <p className="marketplace-copy text-slate-300">Junte-se à revolução das barbearias</p>
           </div>
 
-          {/* Role Selection */}
-          <div className="flex gap-4 mb-8">
+          <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
+              type="button"
               onClick={() => setRole('CUSTOMER')}
-              className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
-                role === 'CUSTOMER' 
-                  ? 'border-lime-400 bg-lime-400/10 text-lime-400' 
+              className={`flex flex-col items-center gap-2 rounded-2xl border p-4 transition-all ${
+                role === 'CUSTOMER'
+                  ? 'border-lime-400 bg-lime-400/10 text-lime-400'
                   : 'border-white/10 bg-white/5 text-slate-400 hover:border-white/30'
               }`}
             >
-              <User className="w-6 h-6" />
+              <User className="h-6 w-6" />
               <span className="text-sm font-medium">Sou Cliente</span>
             </button>
             <button
+              type="button"
               onClick={() => setRole('OWNER')}
-              className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
-                role === 'OWNER' 
-                  ? 'border-lime-400 bg-lime-400/10 text-lime-400' 
+              className={`flex flex-col items-center gap-2 rounded-2xl border p-4 transition-all ${
+                role === 'OWNER'
+                  ? 'border-lime-400 bg-lime-400/10 text-lime-400'
                   : 'border-white/10 bg-white/5 text-slate-400 hover:border-white/30'
               }`}
             >
-              <Store className="w-6 h-6" />
+              <Store className="h-6 w-6" />
               <span className="text-sm font-medium">Sou Barbearia</span>
             </button>
           </div>
 
-          <form onSubmit={handleRegister} className="space-y-4 mb-6">
+          <form onSubmit={handleRegister} className="mb-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Nome Completo</label>
+              <label className="mb-1 block text-sm font-medium text-slate-300">Nome Completo</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                  <User className="w-5 h-5 text-slate-500" />
+                <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
+                  <User className="h-5 w-5 text-slate-500" />
                 </div>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
-                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-lime-400 transition-colors" 
-                  placeholder="João Silva" 
+                  className="w-full rounded-xl border border-white/10 bg-black/50 py-3 pl-12 pr-4 text-white transition-colors focus:border-lime-400 focus:outline-none"
+                  placeholder="João Silva"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+              <label className="mb-1 block text-sm font-medium text-slate-300">Email</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                  <Mail className="w-5 h-5 text-slate-500" />
+                <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
+                  <Mail className="h-5 w-5 text-slate-500" />
                 </div>
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   required
-                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-lime-400 transition-colors" 
-                  placeholder="seu@email.com" 
+                  className="w-full rounded-xl border border-white/10 bg-black/50 py-3 pl-12 pr-4 text-white transition-colors focus:border-lime-400 focus:outline-none"
+                  placeholder="seu@email.com"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Senha</label>
+              <label className="mb-1 block text-sm font-medium text-slate-300">Senha</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                  <Lock className="w-5 h-5 text-slate-500" />
+                <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
+                  <Lock className="h-5 w-5 text-slate-500" />
                 </div>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   required
-                  className="w-full bg-black/50 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-lime-400 transition-colors" 
-                  placeholder="Mínimo 8 caracteres" 
+                  className="w-full rounded-xl border border-white/10 bg-black/50 py-3 pl-12 pr-4 text-white transition-colors focus:border-lime-400 focus:outline-none"
+                  placeholder="Mínimo 8 caracteres"
                 />
               </div>
             </div>
 
-            <button 
+            <button
               type="submit"
-              className="w-full bg-lime-400 text-black py-3 rounded-xl font-bold hover:bg-lime-500 transition-colors mt-6"
+              className="mt-6 w-full rounded-xl bg-lime-400 py-3 font-bold text-black transition-colors hover:bg-lime-500"
             >
               {role === 'OWNER' ? 'Continuar para Barbearia' : 'Criar Conta'}
             </button>
@@ -115,7 +120,7 @@ export const Register: React.FC = () => {
 
           <p className="text-center text-sm text-slate-400">
             Já tem uma conta?{' '}
-            <Link to="/login" className="text-lime-400 hover:underline font-medium">
+            <Link to="/login" className="font-medium text-lime-400 hover:underline">
               Faça login
             </Link>
           </p>
