@@ -1,5 +1,5 @@
 [build]
-  command = "if [ -n \"$VITE_MAPBOX_TOKEN\" ]; then echo \"VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN\" > .env.production; fi; if [ -n \"$GEMINI_API_KEY\" ]; then echo \"GEMINI_API_KEY=$GEMINI_API_KEY\" >> .env.production; fi; npm run build"
+  command = "npm run build"
   publish = "dist"
 
 [[redirects]]

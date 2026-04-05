@@ -26,9 +26,9 @@ View your app in AI Studio: https://ai.studio/apps/358c8ec4-0ab1-4e4e-8d93-d22eb
 
 1. Em `Site configuration > Environment variables`, adicione:
    - `VITE_MAPBOX_TOKEN` (token publico Mapbox iniciado por `pk.`)
-   - `GEMINI_API_KEY` (opcional)
-2. Faça um novo deploy (`Trigger deploy > Deploy site`).
-3. O arquivo `netlify.toml` ja esta configurado para:
+2. Não adicione `GEMINI_API_KEY` no frontend da Netlify para evitar exposição de segredo.
+3. Faça um novo deploy (`Trigger deploy > Clear cache and deploy site`).
+4. O arquivo `netlify.toml` ja esta configurado para:
    - buildar com `npm run build`
    - publicar `dist`
    - aplicar redirect SPA para `index.html`
