@@ -2,19 +2,49 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Chrome, Lock, LogIn, Mail, Scissors } from 'lucide-react';
 import { AuthBackground } from '../components/auth/AuthBackground';
+import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
 
-    if (email.includes('admin')) {
-      navigate('/admin');
-    } else {
+    if (!isSupabaseConfigured) {
+      setErrorMessage(
+        'Supabase nao configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no .env.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const role = String(data.user?.user_metadata?.role ?? '').toUpperCase();
+      if (role === 'OWNER' || role === 'ADMIN') {
+        navigate('/admin');
+        return;
+      }
+
       navigate('/marketplace');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Nao foi possivel fazer login.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -80,11 +110,18 @@ export const Login: React.FC = () => {
 
             <button
               type="submit"
+              disabled={isLoading}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-lime-400 py-3 font-bold text-black transition-colors hover:bg-lime-500"
             >
-              <LogIn className="h-5 w-5" /> Entrar
+              <LogIn className="h-5 w-5" /> {isLoading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
+
+          {errorMessage ? (
+            <p className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {errorMessage}
+            </p>
+          ) : null}
 
           <div className="relative flex items-center py-4">
             <div className="flex-grow border-t border-white/10" />

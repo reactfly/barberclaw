@@ -2,18 +2,58 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Mail, Scissors, Store, User } from 'lucide-react';
 import { AuthBackground } from '../components/auth/AuthBackground';
+import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
 
 export const Register: React.FC = () => {
   const [role, setRole] = useState<'CUSTOMER' | 'OWNER'>('CUSTOMER');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
 
-    if (role === 'OWNER') {
-      navigate('/onboarding');
-    } else {
-      navigate('/marketplace');
+    if (!isSupabaseConfigured) {
+      setErrorMessage(
+        'Supabase nao configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no .env.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.session) {
+        navigate(role === 'OWNER' ? '/onboarding' : '/marketplace');
+        return;
+      }
+
+      setSuccessMessage('Conta criada. Confirme seu email para concluir o cadastro.');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Nao foi possivel criar a conta.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -34,7 +74,7 @@ export const Register: React.FC = () => {
         <div className="w-full max-w-md animate-fade-in-up rounded-3xl border border-white/10 bg-black/45 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
           <div className="mb-8 text-center">
             <h2 className="marketplace-fluid-title mb-2 text-white">Criar Conta</h2>
-            <p className="marketplace-copy text-slate-300">Junte-se à revolução das barbearias</p>
+            <p className="marketplace-copy text-slate-300">Junte-se a revolucao das barbearias</p>
           </div>
 
           <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -74,8 +114,10 @@ export const Register: React.FC = () => {
                 <input
                   type="text"
                   required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-black/50 py-3 pl-12 pr-4 text-white transition-colors focus:border-lime-400 focus:outline-none"
-                  placeholder="João Silva"
+                  placeholder="Joao Silva"
                 />
               </div>
             </div>
@@ -89,6 +131,8 @@ export const Register: React.FC = () => {
                 <input
                   type="email"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-black/50 py-3 pl-12 pr-4 text-white transition-colors focus:border-lime-400 focus:outline-none"
                   placeholder="seu@email.com"
                 />
@@ -104,24 +148,44 @@ export const Register: React.FC = () => {
                 <input
                   type="password"
                   required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-black/50 py-3 pl-12 pr-4 text-white transition-colors focus:border-lime-400 focus:outline-none"
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Minimo 8 caracteres"
                 />
               </div>
             </div>
 
             <button
               type="submit"
+              disabled={isLoading}
               className="mt-6 w-full rounded-xl bg-lime-400 py-3 font-bold text-black transition-colors hover:bg-lime-500"
             >
-              {role === 'OWNER' ? 'Continuar para Barbearia' : 'Criar Conta'}
+              {isLoading
+                ? 'Criando conta...'
+                : role === 'OWNER'
+                  ? 'Continuar para Barbearia'
+                  : 'Criar Conta'}
             </button>
           </form>
 
+          {errorMessage ? (
+            <p className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {errorMessage}
+            </p>
+          ) : null}
+
+          {successMessage ? (
+            <p className="mb-4 rounded-xl border border-lime-400/40 bg-lime-400/10 px-4 py-3 text-sm text-lime-200">
+              {successMessage}
+            </p>
+          ) : null}
+
           <p className="text-center text-sm text-slate-400">
-            Já tem uma conta?{' '}
+            Ja tem uma conta?{' '}
             <Link to="/login" className="font-medium text-lime-400 hover:underline">
-              Faça login
+              Faca login
             </Link>
           </p>
         </div>

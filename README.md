@@ -10,32 +10,49 @@ View your app in AI Studio: https://ai.studio/apps/358c8ec4-0ab1-4e4e-8d93-d22eb
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js
 
 1. Install dependencies:
    `npm install`
-2. Set the `VITE_MAPBOX_TOKEN` in `.env` or `.env.local` to your public Mapbox token
-3. Optionally set `GEMINI_API_KEY` in `.env` or `.env.local` for the AI features
-4. Run the app:
+2. Set `VITE_MAPBOX_TOKEN` in `.env` or `.env.local` with your public Mapbox token
+3. Set Supabase credentials in `.env` or `.env.local`:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+   - `SUPABASE_URL` (server-side only)
+   - `SUPABASE_SECRET_KEY` (server-side only, never with `VITE_`)
+4. Optionally set `GEMINI_API_KEY` for AI features
+5. Run:
    `npm run dev`
 
 ## Deploy
 
-### Netlify (recomendado)
+### Netlify (recommended)
 
-1. Em `Site configuration > Environment variables`, adicione:
-   - `VITE_MAPBOX_TOKEN` (token publico Mapbox iniciado por `pk.`)
-2. Não adicione `GEMINI_API_KEY` no frontend da Netlify para evitar exposição de segredo.
-3. Faça um novo deploy (`Trigger deploy > Clear cache and deploy site`).
-4. O arquivo `netlify.toml` ja esta configurado para:
-   - buildar com `npm run build`
-   - publicar `dist`
-   - aplicar redirect SPA para `index.html`
+1. In `Site configuration > Environment variables`, add:
+   - `VITE_MAPBOX_TOKEN` (public token that starts with `pk.`)
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+   - `SUPABASE_URL` (server-side)
+   - `SUPABASE_SECRET_KEY` (server-side)
+2. Do not expose sensitive keys in frontend variables (for example Supabase secret key).
+3. For server validation, this repo includes:
+   - `/.netlify/functions/supabase-admin-health`
+4. Trigger a new deploy (`Trigger deploy > Clear cache and deploy site`).
+5. `netlify.toml` is already configured to:
+   - run `npm run build`
+   - publish `dist`
+   - load Netlify Functions from `netlify/functions`
+   - use SPA redirect to `index.html`
 
 ### AWS Amplify
 
-Use o `amplify.yml` deste repositório e configure no painel:
+Use `amplify.yml` and configure:
 
 - `VITE_MAPBOX_TOKEN`
-- `GEMINI_API_KEY` (opcional)
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_URL` (for backend/SSR/Lambda usage)
+- `SUPABASE_SECRET_KEY` (for backend/SSR/Lambda usage)
+- `GEMINI_API_KEY` (optional)
+
+Important for Amplify: `SUPABASE_SECRET_KEY` should be consumed only by backend compute (Lambda, SSR, API). Do not inject it into frontend code or variables prefixed with `VITE_`.

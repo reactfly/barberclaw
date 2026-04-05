@@ -8,6 +8,8 @@ frontend:
       commands:
         - if [ -n "$VITE_MAPBOX_TOKEN" ]; then echo "VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN" > .env.production; fi
         - if [ -n "$GEMINI_API_KEY" ]; then echo "GEMINI_API_KEY=$GEMINI_API_KEY" >> .env.production; fi
+        - if [ -n "$VITE_SUPABASE_URL" ]; then echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" >> .env.production; fi
+        - if [ -n "$VITE_SUPABASE_PUBLISHABLE_KEY" ]; then echo "VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY" >> .env.production; fi
         - npm run build
   artifacts:
     baseDirectory: dist
