@@ -31,6 +31,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/platform-dataset"
+  to = "/.netlify/functions/platform-dataset"
+  status = 200
+
+[[redirects]]
   from = "/api/platform-transactions"
   to = "/.netlify/functions/platform-transactions"
   status = 200

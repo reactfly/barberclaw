@@ -1,7 +1,7 @@
 
 import { endOfWeek, format, isAfter, parseISO, startOfWeek, subWeeks } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { getAdminContext, type AdminContext, type AdminAppointment, type AdminBarber, type AdminReview, type AdminService } from './adminApi';
+import { type AdminContext, type AdminAppointment, type AdminBarber, type AdminReview, type AdminService } from './adminApi';
 import { getSupabaseClient } from './supabase';
 import { getPlatformAuditLogs, getPlatformContent, getPlatformNotifications, getPlatformPlans, getPlatformTickets, getPlatformTransactions } from './platformAdminModulesApi';
 import { getPlatformModule, getPlatformModuleHref, PLATFORM_API_BLUEPRINT, PLATFORM_ENTITY_BLUEPRINT, PLATFORM_MODULES, type PlatformModuleDefinition, type PlatformModuleSlug } from '../data/platformAdmin';
@@ -9,6 +9,7 @@ import { getPlatformModule, getPlatformModuleHref, PLATFORM_API_BLUEPRINT, PLATF
 type ProfileLite = { id: string; email: string | null; full_name: string; role: 'customer' | 'owner' | 'admin' | 'staff'; is_active: boolean; updated_at?: string };
 type ShopLite = { id: string; owner_id: string; name: string; slug: string; city: string; state: string; is_active: boolean; is_featured: boolean; is_premium: boolean };
 type Dataset = { profiles: ProfileLite[]; shops: ShopLite[]; barbers: AdminBarber[]; services: AdminService[]; appointments: AdminAppointment[]; reviews: AdminReview[] };
+type PlatformDatasetPayload = { context: AdminContext; dataset: Dataset };
 
 export interface PlatformMetricCard { id: string; label: string; value: string; delta: string; tone: 'lime' | 'sky' | 'amber' | 'rose' | 'violet' | 'cyan'; helper: string }
 export interface PlatformTrendPoint { label: string; revenue: number; bookings: number; retention: number }
@@ -29,19 +30,46 @@ const customerKey = (appointment: AdminAppointment) => appointment.customer_prof
 const delta = (current: number, previous: number) => previous === 0 ? (current === 0 ? '0%' : '+100%') : `${(((current - previous) / previous) * 100 >= 0 ? '+' : '') + (((current - previous) / previous) * 100).toFixed(1)}%`;
 const parseCurrency = (value: string) => Number(value.replace(/[^\d,-]/g, '').replace(/\./g, '').replace(',', '.') || '0');
 
-const getDataset = async (): Promise<Dataset> => {
+const getSessionAccessToken = async () => {
   const supabase = await getSupabaseClient();
-  const [profiles, shops, barbers, services, appointments, reviews] = await Promise.all([
-    supabase.from('profiles').select('id,email,full_name,role,is_active,updated_at').order('full_name'),
-    supabase.from('barbershops').select('id,owner_id,name,slug,city,state,is_active,is_featured,is_premium').order('name'),
-    supabase.from('barbers').select('*').order('name'),
-    supabase.from('services').select('*').order('name'),
-    supabase.from('appointments').select('*').order('created_at', { ascending: false }).limit(2000),
-    supabase.from('reviews').select('*').order('created_at', { ascending: false }).limit(2000),
-  ]);
-  const failed = [profiles, shops, barbers, services, appointments, reviews].find((result) => result.error);
-  if (failed?.error) throw failed.error;
-  return { profiles: (profiles.data ?? []) as ProfileLite[], shops: (shops.data ?? []) as ShopLite[], barbers: (barbers.data ?? []) as AdminBarber[], services: (services.data ?? []) as AdminService[], appointments: (appointments.data ?? []) as AdminAppointment[], reviews: (reviews.data ?? []) as AdminReview[] };
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) {
+    throw error;
+  }
+
+  const accessToken = data.session?.access_token;
+  if (!accessToken) {
+    throw new Error('Sua sessao expirou. Faca login novamente para continuar.');
+  }
+
+  return accessToken;
+};
+
+const requestPlatformDataset = async (): Promise<PlatformDatasetPayload> => {
+  const accessToken = await getSessionAccessToken();
+  const response = await fetch('/api/platform-dataset', {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const body = (await response.json().catch(() => ({}))) as {
+    ok?: boolean;
+    error?: string;
+    context?: AdminContext;
+    dataset?: Dataset;
+  };
+
+  if (!response.ok || body.ok === false || !body.context || !body.dataset) {
+    throw new Error(body.error || 'Nao foi possivel carregar os dados do super admin.');
+  }
+
+  return {
+    context: body.context,
+    dataset: body.dataset,
+  };
 };
 
 const buildCommands = (dataset: Dataset): PlatformCommandItem[] => [
@@ -266,14 +294,13 @@ const hydrateModuleFromServer = async (moduleData: PlatformModuleData, slug: Pla
 };
 
 export const getPlatformDashboardData = async (): Promise<PlatformDashboardData> => {
-  const context = await getAdminContext(); if (!context.isPlatformAdmin) throw new Error('Este painel global e exclusivo para administradores da plataforma.');
-  const dataset = await getDataset(); const rankings = buildRanking(dataset);
+  const { context, dataset } = await requestPlatformDataset(); if (!context.isPlatformAdmin) throw new Error('Este painel global e exclusivo para administradores da plataforma.');
+  const rankings = buildRanking(dataset);
   return { context, metrics: buildMetrics(dataset), trend: buildTrend(dataset), rankings, alerts: buildAlerts(dataset, rankings), spotlight: [{ title: 'Barbearia com maior tracao', value: rankings[0]?.name ?? 'Sem dados', helper: rankings[0] ? `${rankings[0].bookings} agendamentos e ${money.format(rankings[0].revenue)}` : 'Aguardando operacao' }, { title: 'Base com maior risco', value: `${dataset.appointments.filter((appointment) => appointment.status === 'cancelled' || appointment.status === 'no_show').length} eventos`, helper: 'Cancelamentos e no-show devem acionar automacoes e revisao operacional' }, { title: 'Motor de crescimento', value: `${dataset.shops.filter((shop) => !shop.is_premium).length} oportunidades de upgrade`, helper: 'Combinar planos, campanhas e destaque comercial para expandir MRR' }], commands: buildCommands(dataset) };
 };
 
 export const getPlatformModuleData = async (slug: PlatformModuleSlug): Promise<PlatformModuleData> => {
-  const context = await getAdminContext(); if (!context.isPlatformAdmin) throw new Error('Este modulo global e exclusivo para administradores da plataforma.');
-  const dataset = await getDataset();
+  const { context, dataset } = await requestPlatformDataset(); if (!context.isPlatformAdmin) throw new Error('Este modulo global e exclusivo para administradores da plataforma.');
   const baseModule = buildModule(context, dataset, slug);
   return hydrateModuleFromServer(baseModule, slug);
 };
