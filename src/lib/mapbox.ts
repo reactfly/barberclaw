@@ -1,6 +1,7 @@
 /**
  * Mapbox Service - Core utilities for maps, routing, and geolocation
  */
+import { getCachedPublicRuntimeConfig, getPublicRuntimeConfig } from './runtimeConfig';
 
 const normalizeEnvValue = (value: unknown): string => {
   if (typeof value !== 'string') return '';
@@ -9,14 +10,14 @@ const normalizeEnvValue = (value: unknown): string => {
 
 const isLikelyPublicMapboxToken = (token: string): boolean => token.startsWith('pk.');
 
-const MAPBOX_TOKEN = () => {
-  const token = normalizeEnvValue(import.meta.env.VITE_MAPBOX_TOKEN);
+const normalizeMapboxToken = (tokenValue: unknown) => {
+  const token = normalizeEnvValue(tokenValue);
 
   if (!token) return '';
 
   if (!isLikelyPublicMapboxToken(token)) {
     console.warn(
-      'Mapbox token invalido: configure VITE_MAPBOX_TOKEN com um token publico iniciado por "pk.".'
+      'Mapbox token invalido: configure o token publico do Mapbox no endpoint /api/public-runtime-config.'
     );
     return '';
   }
@@ -118,7 +119,7 @@ export async function getRoute(
   destination: Coordinates,
   mode: TravelMode = 'driving'
 ): Promise<RouteInfo> {
-  const token = MAPBOX_TOKEN();
+  const token = await loadMapboxToken();
   if (!token) throw new Error('Token Mapbox não configurado.');
 
   const url = `https://api.mapbox.com/directions/v5/mapbox/${mode}/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?geometries=geojson&overview=full&access_token=${token}`;
@@ -224,5 +225,11 @@ export function haversineDistance(a: Coordinates, b: Coordinates): number {
 }
 
 export function getMapboxToken(): string {
-  return MAPBOX_TOKEN();
+  const cachedConfig = getCachedPublicRuntimeConfig();
+  return normalizeMapboxToken(cachedConfig?.mapboxToken);
+}
+
+export async function loadMapboxToken(): Promise<string> {
+  const config = await getPublicRuntimeConfig();
+  return normalizeMapboxToken(config.mapboxToken);
 }

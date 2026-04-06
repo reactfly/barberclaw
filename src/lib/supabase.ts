@@ -1,21 +1,29 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+import { getPublicRuntimeConfig } from './runtimeConfig';
 
 let supabaseClient: SupabaseClient | null = null;
+let cachedSupabaseUrl = '';
+let cachedSupabasePublishableKey = '';
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
+export const getSupabaseClient = async () => {
+  const config = await getPublicRuntimeConfig();
+  const supabaseUrl = config.supabaseUrl;
+  const supabasePublishableKey = config.supabasePublishableKey;
 
-export const getSupabaseClient = () => {
-  if (!isSupabaseConfigured) {
+  if (!supabaseUrl || !supabasePublishableKey) {
     throw new Error(
-      'Supabase nao configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no .env.'
+      'Supabase nao configurado. Verifique o endpoint /api/public-runtime-config no ambiente.'
     );
   }
 
-  if (!supabaseClient) {
-    supabaseClient = createClient(supabaseUrl!, supabasePublishableKey!);
+  if (
+    !supabaseClient ||
+    cachedSupabaseUrl !== supabaseUrl ||
+    cachedSupabasePublishableKey !== supabasePublishableKey
+  ) {
+    supabaseClient = createClient(supabaseUrl, supabasePublishableKey);
+    cachedSupabaseUrl = supabaseUrl;
+    cachedSupabasePublishableKey = supabasePublishableKey;
   }
 
   return supabaseClient;

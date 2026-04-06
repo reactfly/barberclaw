@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Chrome, Lock, LogIn, Mail, Scissors } from 'lucide-react';
 import { AuthBackground } from '../components/auth/AuthBackground';
-import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -15,16 +15,9 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setErrorMessage('');
 
-    if (!isSupabaseConfigured) {
-      setErrorMessage(
-        'Supabase nao configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY no .env.'
-      );
-      return;
-    }
-
     setIsLoading(true);
     try {
-      const supabase = getSupabaseClient();
+      const supabase = await getSupabaseClient();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password

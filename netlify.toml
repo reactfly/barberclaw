@@ -6,6 +6,11 @@
   directory = "netlify/functions"
 
 [[redirects]]
+  from = "/api/public-runtime-config"
+  to = "/.netlify/functions/public-runtime-config"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

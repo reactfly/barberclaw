@@ -25,7 +25,7 @@ import {
   getTravelModeLabel,
   openGoogleMaps,
   openWaze,
-  getMapboxToken,
+  loadMapboxToken,
   getBoundsForPoints,
   haversineDistance,
   MAP_STYLES,
@@ -60,17 +60,42 @@ export const MapboxNavigator: React.FC<MapboxNavigatorProps> = ({ barbershop, cl
   const [copied, setCopied] = useState(false);
   const [showExternalNav, setShowExternalNav] = useState(false);
   const [straightLineDistance, setStraightLineDistance] = useState<number | null>(null);
+  const [mapboxToken, setMapboxToken] = useState('');
+  const [isMapboxConfigResolved, setIsMapboxConfigResolved] = useState(false);
 
   const { location: userLocation, status: geoStatus, error: geoError, requestLocation } = useGeolocation();
 
-  const token = getMapboxToken();
+  useEffect(() => {
+    let isMounted = true;
+
+    loadMapboxToken()
+      .then((token) => {
+        if (isMounted) {
+          setMapboxToken(token);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setMapboxToken('');
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsMapboxConfigResolved(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // ── Initialize Map ─────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!token || !mapContainerRef.current || mapRef.current) return;
+    if (!mapboxToken || !mapContainerRef.current || mapRef.current) return;
 
-    mapboxgl.accessToken = token;
+    mapboxgl.accessToken = mapboxToken;
 
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
@@ -146,7 +171,7 @@ export const MapboxNavigator: React.FC<MapboxNavigatorProps> = ({ barbershop, cl
       map.remove();
       mapRef.current = null;
     };
-  }, [token, barbershop]);
+  }, [mapboxToken, barbershop]);
 
   // ── Update user marker ─────────────────────────────────────────────
 
@@ -277,7 +302,7 @@ export const MapboxNavigator: React.FC<MapboxNavigatorProps> = ({ barbershop, cl
 
   // ── No token fallback ──────────────────────────────────────────────
 
-  if (!token) {
+  if (!mapboxToken && isMapboxConfigResolved) {
     return (
       <div className={`bg-zinc-900/80 border border-white/10 rounded-3xl p-8 text-center ${className}`}>
         <MapPin className="w-12 h-12 text-lime-400/50 mx-auto mb-4" />

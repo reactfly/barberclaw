@@ -19,7 +19,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { PublicHeader } from '../components/marketplace/PublicHeader';
 import { MARKETPLACE_BARBERSHOPS, type MarketplaceBarbershop } from '../data/marketplace';
-import { formatDistance, getBoundsForPoints, getMapboxToken, haversineDistance } from '../lib/mapbox';
+import { formatDistance, getBoundsForPoints, haversineDistance, loadMapboxToken } from '../lib/mapbox';
 import { useGeolocation } from '../hooks/useGeolocation';
 
 type MobileView = 'list' | 'map';
@@ -81,14 +81,40 @@ export const Marketplace: React.FC = () => {
   const [selectedShopId, setSelectedShopId] = useState(defaultSelectedShopId);
   const [mobileView, setMobileView] = useState<MobileView>('list');
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapboxToken, setMapboxToken] = useState('');
+  const [isMapboxConfigResolved, setIsMapboxConfigResolved] = useState(false);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
 
-  const token = getMapboxToken();
   const { location: userLocation, status: geoStatus, error: geoError, requestLocation } = useGeolocation();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    loadMapboxToken()
+      .then((token) => {
+        if (isMounted) {
+          setMapboxToken(token);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setMapboxToken('');
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsMapboxConfigResolved(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const shopsWithDistance: ShopWithDistance[] = MARKETPLACE_BARBERSHOPS.map((shop) => ({
     ...shop,
@@ -149,9 +175,9 @@ export const Marketplace: React.FC = () => {
   }, [filteredShops, selectedShopId]);
 
   useEffect(() => {
-    if (!token || !mapContainerRef.current || mapRef.current) return;
+    if (!mapboxToken || !mapContainerRef.current || mapRef.current) return;
 
-    mapboxgl.accessToken = token;
+    mapboxgl.accessToken = mapboxToken;
 
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
@@ -206,7 +232,7 @@ export const Marketplace: React.FC = () => {
       setMapLoaded(false);
       markersRef.current.clear();
     };
-  }, [token]);
+  }, [mapboxToken]);
 
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
@@ -614,7 +640,7 @@ export const Marketplace: React.FC = () => {
             </div>
 
             <div className={`relative min-h-[58vh] overflow-hidden rounded-3xl border border-white/10 bg-black/30 md:min-h-[520px] md:rounded-[32px] ${mobileView === 'list' ? 'hidden xl:block' : 'block'}`}>
-              {token ? (
+              {mapboxToken ? (
                 <>
                   <div ref={mapContainerRef} className="h-full min-h-[58vh] w-full md:min-h-[520px]" />
 
@@ -705,17 +731,21 @@ export const Marketplace: React.FC = () => {
                     </>
                   )}
                 </>
-              ) : (
+              ) : isMapboxConfigResolved ? (
                 <div className="flex h-full min-h-[520px] flex-col items-center justify-center px-8 text-center">
                   <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-lime-400/10">
                     <MapPin className="h-8 w-8 text-lime-300" />
                   </div>
                   <h3 className="marketplace-fluid-section mt-5 text-white">Ative o mapa interativo</h3>
                   <p className="marketplace-copy mt-3 max-w-md text-sm text-slate-400">
-                    Configure <code className="rounded bg-black/40 px-2 py-1 text-lime-300">VITE_MAPBOX_TOKEN</code> (token
-                    publico <code className="rounded bg-black/40 px-2 py-1 text-lime-300">pk.</code>) no ambiente local/.env
-                    ou no painel da Netlify para exibir rotas, pins e distancias em tempo real.
+                    Configure o token publico do Mapbox no endpoint <code className="rounded bg-black/40 px-2 py-1 text-lime-300">/api/public-runtime-config</code>
+                    para exibir rotas, pins e distancias em tempo real.
                   </p>
+                </div>
+              ) : (
+                <div className="flex h-full min-h-[520px] flex-col items-center justify-center px-8 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-lime-300" />
+                  <p className="marketplace-copy mt-3 text-sm text-slate-400">Carregando configuracao do mapa...</p>
                 </div>
               )}
             </div>
