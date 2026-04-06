@@ -220,7 +220,7 @@ export const getPostAuthRedirectPath = (context: SessionContext): string => {
     return '/admin';
   }
 
-  return '/marketplace';
+  return '/painel';
 };
 
 export const resolvePostAuthRedirectPath = async (): Promise<string> => {

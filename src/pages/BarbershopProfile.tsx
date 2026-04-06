@@ -17,8 +17,10 @@ import {
 import { BookingCalendar } from '../components/marketplace/BookingCalendar';
 import { MapboxNavigator } from '../components/map/MapboxNavigator';
 import type { MarketplaceBarbershop } from '../data/marketplace';
+import { getCurrentSessionContext } from '../lib/auth';
 import { formatDistance, haversineDistance } from '../lib/mapbox';
 import { getMarketplaceBarbershopBySlug } from '../lib/marketplaceApi';
+import { createPublicBooking } from '../lib/publicBookingApi';
 import { useGeolocation } from '../hooks/useGeolocation';
 
 type BookingStep = 1 | 2 | 3;
@@ -35,6 +37,16 @@ export const BarbershopProfile: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ProfileTab>('booking');
   const [liked, setLiked] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [bookingContact, setBookingContact] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    notes: '',
+  });
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [bookingError, setBookingError] = useState('');
+  const [bookingSuccessMessage, setBookingSuccessMessage] = useState('');
+  const [confirmedBookingId, setConfirmedBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -59,6 +71,38 @@ export const BarbershopProfile: React.FC = () => {
     };
   }, [slug]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    getCurrentSessionContext()
+      .then((context) => {
+        if (!isMounted || !context) {
+          return;
+        }
+
+        setBookingContact((current) => ({
+          ...current,
+          name: current.name || context.profile.full_name,
+          email: current.email || context.profile.email || '',
+          phone: current.phone || context.profile.phone || '',
+        }));
+      })
+      .catch(() => {
+        // Public booking also works without an authenticated user.
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setSelectedDateTime(null);
+    setConfirmedBookingId(null);
+    setBookingSuccessMessage('');
+    setBookingError('');
+  }, [selectedBarber, selectedService]);
+
   if (!shop) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#050505] text-slate-100">
@@ -73,10 +117,52 @@ export const BarbershopProfile: React.FC = () => {
   const selectedServiceData = shop.services.find((service) => service.id === selectedService) ?? null;
   const selectedBarberData = shop.barbers.find((barber) => barber.id === selectedBarber) ?? null;
   const userDistance = userLocation ? haversineDistance(userLocation, shop.coordinates) : null;
+  const isRealTimeBookingEnabled = shop.source === 'supabase';
 
   const handleNextStep = () => {
     if (bookingStep < 3) {
       setBookingStep((current) => (current + 1) as BookingStep);
+    }
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!selectedServiceData || !selectedBarberData || !selectedDateTime) {
+      setBookingError('Escolha servico, profissional e horario antes de confirmar.');
+      return;
+    }
+
+    if (!isRealTimeBookingEnabled) {
+      setBookingError(
+        'Este perfil e demonstrativo. O agendamento online em tempo real esta disponivel apenas para barbearias conectadas ao Supabase.'
+      );
+      return;
+    }
+
+    setIsSubmittingBooking(true);
+    setBookingError('');
+    setBookingSuccessMessage('');
+
+    try {
+      const result = await createPublicBooking({
+        shopId: shop.id,
+        serviceId: selectedServiceData.id,
+        barberId: selectedBarberData.id,
+        appointmentDate: selectedDateTime.date.toISOString().slice(0, 10),
+        startTime: selectedDateTime.time,
+        customerName: bookingContact.name,
+        customerEmail: bookingContact.email,
+        customerPhone: bookingContact.phone,
+        notes: bookingContact.notes,
+      });
+
+      setConfirmedBookingId(result.appointment.id);
+      setBookingSuccessMessage(result.message);
+    } catch (error) {
+      setBookingError(
+        error instanceof Error ? error.message : 'Nao foi possivel concluir o agendamento.'
+      );
+    } finally {
+      setIsSubmittingBooking(false);
     }
   };
 
@@ -384,8 +470,15 @@ export const BarbershopProfile: React.FC = () => {
 
                       <div className="rounded-3xl border border-white/10 bg-black/20 p-4 md:rounded-[28px] md:p-6">
                         <BookingCalendar
+                          shopId={shop.id}
+                          barberId={selectedBarber}
                           durationMinutes={selectedServiceData?.duration}
-                          onSelectDateTime={(date, time) => setSelectedDateTime({ date, time })}
+                          onSelectDateTime={(date, time) => {
+                            setBookingError('');
+                            setConfirmedBookingId(null);
+                            setBookingSuccessMessage('');
+                            setSelectedDateTime({ date, time });
+                          }}
                         />
                       </div>
                     </div>
@@ -404,53 +497,169 @@ export const BarbershopProfile: React.FC = () => {
                 )}
 
                 {bookingStep === 3 && (
-                  <div className="py-8 text-center">
-                    <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-lime-400/15">
-                      <CheckCircle2 className="h-10 w-10 text-lime-300" />
-                    </div>
-                    <h3 className="marketplace-fluid-title mt-6 text-white">Agendamento confirmado</h3>
-                    <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-300">
-                      Sua reserva foi registrada com sucesso. Agora voce ja pode abrir a rota, ligar para a barbearia ou voltar ao marketplace.
-                    </p>
+                  <div className="space-y-8 py-2">
+                    <button
+                      type="button"
+                      onClick={() => setBookingStep(2)}
+                      className="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Voltar para horario
+                    </button>
 
-                    <div className="mx-auto mt-8 max-w-xl rounded-3xl border border-white/10 bg-black/20 p-4 text-left sm:p-5 md:rounded-[28px]">
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Servico</p>
-                          <p className="mt-2 font-semibold text-white">{selectedServiceData?.name}</p>
+                    {confirmedBookingId ? (
+                      <div className="py-8 text-center">
+                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-lime-400/15">
+                          <CheckCircle2 className="h-10 w-10 text-lime-300" />
                         </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Profissional</p>
-                          <p className="mt-2 font-semibold text-white">{selectedBarberData?.name}</p>
+                        <h3 className="marketplace-fluid-title mt-6 text-white">Reserva enviada com sucesso</h3>
+                        <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-300">
+                          {bookingSuccessMessage || 'Seu pedido foi salvo em appointments e ja aparece para a equipe no painel admin.'}
+                        </p>
+
+                        <div className="mx-auto mt-8 max-w-xl rounded-3xl border border-white/10 bg-black/20 p-4 text-left sm:p-5 md:rounded-[28px]">
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Servico</p>
+                              <p className="mt-2 font-semibold text-white">{selectedServiceData?.name}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Profissional</p>
+                              <p className="mt-2 font-semibold text-white">{selectedBarberData?.name}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Data</p>
+                              <p className="mt-2 font-semibold text-white">
+                                {selectedDateTime?.date.toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Horario</p>
+                              <p className="mt-2 font-semibold text-white">{selectedDateTime?.time}</p>
+                            </div>
+                            <div className="sm:col-span-2">
+                              <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Codigo da reserva</p>
+                              <p className="mt-2 break-all font-semibold text-white">{confirmedBookingId}</p>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Data</p>
-                          <p className="mt-2 font-semibold text-white">
-                            {selectedDateTime?.date.toLocaleDateString('pt-BR')}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Horario</p>
-                          <p className="mt-2 font-semibold text-white">{selectedDateTime?.time}</p>
+
+                        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('location')}
+                            className="rounded-full bg-lime-400 px-6 py-3 text-sm font-bold text-black transition-colors hover:bg-lime-300"
+                          >
+                            Ver como chegar
+                          </button>
+                          <Link
+                            to="/marketplace"
+                            className="rounded-full border border-white/10 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-white/[0.05]"
+                          >
+                            Voltar ao marketplace
+                          </Link>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div>
+                          <p className="marketplace-kicker text-xs text-lime-300">Ultima etapa</p>
+                          <h3 className="marketplace-fluid-section mt-2 text-white">Revise e confirme sua reserva</h3>
+                          <p className="mt-2 text-sm text-slate-400">
+                            Vamos gravar esse pedido diretamente em <code>appointments</code> no Supabase.
+                          </p>
+                        </div>
 
-                    <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('location')}
-                        className="rounded-full bg-lime-400 px-6 py-3 text-sm font-bold text-black transition-colors hover:bg-lime-300"
-                      >
-                        Ver como chegar
-                      </button>
-                      <Link
-                        to="/marketplace"
-                        className="rounded-full border border-white/10 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-white/[0.05]"
-                      >
-                        Voltar ao marketplace
-                      </Link>
-                    </div>
+                        {!isRealTimeBookingEnabled ? (
+                          <div className="rounded-3xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-100">
+                            Este perfil e apenas demonstrativo. O agendamento online em tempo real esta ativo para barbearias conectadas ao Supabase.
+                          </div>
+                        ) : null}
+
+                        {bookingError ? (
+                          <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-100">
+                            {bookingError}
+                          </div>
+                        ) : null}
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="rounded-3xl border border-white/10 bg-black/20 p-4">
+                            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Servico</p>
+                            <p className="mt-2 font-semibold text-white">{selectedServiceData?.name}</p>
+                            <p className="mt-1 text-sm text-slate-400">{selectedServiceData?.duration} min</p>
+                          </div>
+                          <div className="rounded-3xl border border-white/10 bg-black/20 p-4">
+                            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Profissional</p>
+                            <p className="mt-2 font-semibold text-white">{selectedBarberData?.name}</p>
+                            <p className="mt-1 text-sm text-slate-400">{selectedBarberData?.specialty}</p>
+                          </div>
+                          <div className="rounded-3xl border border-white/10 bg-black/20 p-4">
+                            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Data</p>
+                            <p className="mt-2 font-semibold text-white">
+                              {selectedDateTime?.date.toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                          <div className="rounded-3xl border border-white/10 bg-black/20 p-4">
+                            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Horario</p>
+                            <p className="mt-2 font-semibold text-white">{selectedDateTime?.time}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <input
+                            value={bookingContact.name}
+                            onChange={(event) =>
+                              setBookingContact((current) => ({ ...current, name: event.target.value }))
+                            }
+                            className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white focus:border-lime-400 focus:outline-none"
+                            placeholder="Seu nome"
+                          />
+                          <input
+                            value={bookingContact.phone}
+                            onChange={(event) =>
+                              setBookingContact((current) => ({ ...current, phone: event.target.value }))
+                            }
+                            className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white focus:border-lime-400 focus:outline-none"
+                            placeholder="Telefone"
+                          />
+                        </div>
+                        <input
+                          value={bookingContact.email}
+                          onChange={(event) =>
+                            setBookingContact((current) => ({ ...current, email: event.target.value }))
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white focus:border-lime-400 focus:outline-none"
+                          placeholder="Email (opcional)"
+                        />
+                        <textarea
+                          value={bookingContact.notes}
+                          onChange={(event) =>
+                            setBookingContact((current) => ({ ...current, notes: event.target.value }))
+                          }
+                          rows={4}
+                          className="w-full resize-none rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-white focus:border-lime-400 focus:outline-none"
+                          placeholder="Observacoes para a barbearia (opcional)"
+                        />
+
+                        <div className="flex flex-col items-center justify-end gap-3 sm:flex-row">
+                          <button
+                            type="button"
+                            onClick={handleConfirmBooking}
+                            disabled={isSubmittingBooking || !selectedDateTime}
+                            className="rounded-full bg-lime-400 px-6 py-3 text-sm font-bold text-black transition-colors hover:bg-lime-300 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isSubmittingBooking ? 'Confirmando...' : 'Confirmar agendamento'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('location')}
+                            className="rounded-full border border-white/10 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-white/[0.05]"
+                          >
+                            Ver local antes
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

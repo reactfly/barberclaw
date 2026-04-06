@@ -11,6 +11,7 @@ import { AdminSettings } from './src/pages/AdminSettings';
 import { Onboarding } from './src/pages/Onboarding';
 import { Login } from './src/pages/Login';
 import { Register } from './src/pages/Register';
+import { CustomerDashboard } from './src/pages/CustomerDashboard';
 import { ProtectedRoute } from './src/components/auth/ProtectedRoute';
 
 const App: React.FC = () => {
@@ -27,6 +28,14 @@ const App: React.FC = () => {
         {/* B2C Routes */}
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/b/:slug" element={<BarbershopProfile />} />
+        <Route
+          path="/painel"
+          element={
+            <ProtectedRoute mode="customer">
+              <CustomerDashboard />
+            </ProtectedRoute>
+          }
+        />
         
         {/* B2B Routes */}
         <Route

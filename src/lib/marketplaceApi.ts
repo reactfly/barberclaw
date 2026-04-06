@@ -232,6 +232,7 @@ const mapShop = (shop: SupabaseShopRow): MarketplaceBarbershop => {
 
   return {
     id: shop.id,
+    source: 'supabase',
     slug: shop.slug,
     name: shop.name,
     neighborhood: shop.neighborhood ?? 'Regiao central',

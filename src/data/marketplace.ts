@@ -29,6 +29,7 @@ export interface MarketplaceReview {
 
 export interface MarketplaceBarbershop extends BarbershopLocation {
   id: string;
+  source: 'demo' | 'supabase';
   slug: string;
   neighborhood: string;
   city: string;
@@ -58,6 +59,7 @@ export interface MarketplaceBarbershop extends BarbershopLocation {
 export const MARKETPLACE_BARBERSHOPS: MarketplaceBarbershop[] = [
   {
     id: '1',
+    source: 'demo',
     slug: 'barber-flow-premium',
     name: 'BarberFlow Premium',
     neighborhood: 'Bela Vista',
@@ -103,6 +105,7 @@ export const MARKETPLACE_BARBERSHOPS: MarketplaceBarbershop[] = [
   },
   {
     id: '2',
+    source: 'demo',
     slug: 'navalha-de-ouro',
     name: 'Navalha de Ouro',
     neighborhood: 'Consolacao',
@@ -147,6 +150,7 @@ export const MARKETPLACE_BARBERSHOPS: MarketplaceBarbershop[] = [
   },
   {
     id: '3',
+    source: 'demo',
     slug: 'vintage-club',
     name: 'Vintage Club Barbearia',
     neighborhood: 'Jardins',
@@ -190,6 +194,7 @@ export const MARKETPLACE_BARBERSHOPS: MarketplaceBarbershop[] = [
   },
   {
     id: '4',
+    source: 'demo',
     slug: 'casa-norte-studio',
     name: 'Casa Norte Studio',
     neighborhood: 'Pinheiros',
@@ -235,6 +240,7 @@ export const MARKETPLACE_BARBERSHOPS: MarketplaceBarbershop[] = [
   },
   {
     id: '5',
+    source: 'demo',
     slug: 'orbit-grooming-lab',
     name: 'Orbit Grooming Lab',
     neighborhood: 'Vila Mariana',

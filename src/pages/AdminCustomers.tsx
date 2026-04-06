@@ -1,90 +1,152 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Clock, Loader2, Search, Star } from 'lucide-react';
 import { AdminSidebar } from '../components/saas/AdminSidebar';
-import { Search, UserPlus, Star, Clock } from 'lucide-react';
-
-const MOCK_CUSTOMERS = [
-  { id: 1, name: 'João Pedro', email: 'joao@email.com', phone: '(11) 99999-9999', lastVisit: '05/04/2026', totalVisits: 12, rating: 5 },
-  { id: 2, name: 'Marcos Silva', email: 'marcos@email.com', phone: '(11) 98888-8888', lastVisit: '01/04/2026', totalVisits: 5, rating: 4 },
-  { id: 3, name: 'Lucas Almeida', email: 'lucas@email.com', phone: '(11) 97777-7777', lastVisit: '15/03/2026', totalVisits: 24, rating: 5 },
-];
+import { getCustomersData, type CustomerSummary } from '../lib/adminApi';
 
 export const AdminCustomers: React.FC = () => {
+  const [customers, setCustomers] = useState<CustomerSummary[]>([]);
+  const [query, setQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getCustomersData()
+      .then((result) => {
+        if (isMounted) {
+          setCustomers(result.customers);
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          setErrorMessage(error instanceof Error ? error.message : 'Nao foi possivel carregar os clientes.');
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredCustomers = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
+      return customers;
+    }
+
+    return customers.filter((customer) =>
+      [customer.name, customer.email, customer.phone, customer.lastService]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalized)
+    );
+  }, [customers, query]);
+
   return (
     <div className="min-h-screen bg-[#050505] text-slate-100 font-sans flex">
       <AdminSidebar />
 
       <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
-        <header className="px-8 py-6 border-b border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#0a0a0a]/50 backdrop-blur-md sticky top-0 z-10">
+        <header className="sticky top-0 z-10 flex flex-col gap-4 border-b border-white/10 bg-[#0a0a0a]/50 px-8 py-6 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
           <div className="pl-12 md:pl-0">
             <h2 className="text-2xl font-bold">Clientes</h2>
-            <p className="text-sm text-slate-400">Gerencie sua base de clientes e histórico</p>
+            <p className="text-sm text-slate-400">Historico, recorrencia e reputacao da sua base</p>
           </div>
-          <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-lime-400 text-black px-4 py-2 rounded-full text-sm font-bold hover:bg-lime-500 transition-colors">
-            <UserPlus className="w-4 h-4" /> Novo Cliente
-          </button>
         </header>
 
         <div className="p-4 md:p-8">
-          {/* Search and Filters */}
-          <div className="flex gap-4 mb-8">
-            <div className="relative flex-1 max-w-md">
-              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                <Search className="w-5 h-5 text-slate-500" />
-              </div>
-              <input 
-                type="text" 
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-lime-400 transition-colors" 
-                placeholder="Buscar por nome, email ou telefone..." 
-              />
+          {isLoading ? (
+            <div className="flex min-h-[40vh] items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-lime-300" />
             </div>
-          </div>
+          ) : errorMessage ? (
+            <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {errorMessage}
+            </div>
+          ) : (
+            <>
+              <div className="mb-8 flex gap-4">
+                <div className="relative flex-1 max-w-xl">
+                  <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
+                    <Search className="h-5 w-5 text-slate-500" />
+                  </div>
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-12 pr-4 text-white focus:border-lime-400 focus:outline-none"
+                    placeholder="Buscar por nome, email, telefone ou ultimo servico..."
+                  />
+                </div>
+              </div>
 
-          {/* Customers List */}
-          <div className="bg-white/5 border border-white/10 rounded-3xl overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[700px]">
-              <thead>
-                <tr className="border-b border-white/10 text-sm text-slate-400 bg-black/20">
-                  <th className="p-4 font-medium">Cliente</th>
-                  <th className="p-4 font-medium">Contato</th>
-                  <th className="p-4 font-medium">Última Visita</th>
-                  <th className="p-4 font-medium">Total Visitas</th>
-                  <th className="p-4 font-medium">Avaliação Média</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {MOCK_CUSTOMERS.map((customer) => (
-                  <tr key={customer.id} className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-lime-400">
-                          {customer.name.charAt(0)}
-                        </div>
-                        <span className="font-bold">{customer.name}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col">
-                        <span className="text-slate-300">{customer.phone}</span>
-                        <span className="text-xs text-slate-500">{customer.email}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2 text-slate-400">
-                        <Clock className="w-4 h-4" /> {customer.lastVisit}
-                      </div>
-                    </td>
-                    <td className="p-4 font-medium">{customer.totalVisits}</td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-1 text-yellow-400">
-                        <Star className="w-4 h-4 fill-yellow-400" />
-                        <span className="font-bold">{customer.rating}.0</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              <div className="overflow-x-auto rounded-3xl border border-white/10 bg-white/5">
+                <table className="min-w-[760px] w-full border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-black/20 text-sm text-slate-400">
+                      <th className="p-4 font-medium">Cliente</th>
+                      <th className="p-4 font-medium">Contato</th>
+                      <th className="p-4 font-medium">Ultima visita</th>
+                      <th className="p-4 font-medium">Total visitas</th>
+                      <th className="p-4 font-medium">Ultimo servico</th>
+                      <th className="p-4 font-medium">Avaliacao media</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm">
+                    {filteredCustomers.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-6 text-center text-slate-400">
+                          Nenhum cliente encontrado com esse filtro.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCustomers.map((customer) => (
+                        <tr key={customer.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 font-bold text-lime-400">
+                                {customer.name.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="font-bold">{customer.name}</span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex flex-col">
+                              <span className="text-slate-300">{customer.phone || 'Nao informado'}</span>
+                              <span className="text-xs text-slate-500">{customer.email || 'Nao informado'}</span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2 text-slate-400">
+                              <Clock className="h-4 w-4" /> {customer.lastVisit.split('-').reverse().join('/')}
+                            </div>
+                          </td>
+                          <td className="p-4 font-medium">{customer.totalVisits}</td>
+                          <td className="p-4 text-slate-300">{customer.lastService}</td>
+                          <td className="p-4">
+                            {customer.averageRating ? (
+                              <div className="flex items-center gap-1 text-yellow-400">
+                                <Star className="h-4 w-4 fill-yellow-400" />
+                                <span className="font-bold">{customer.averageRating.toFixed(1)}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-500">Sem avaliacoes</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       </main>
     </div>

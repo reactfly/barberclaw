@@ -1,9 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(useGSAP, ScrollTrigger);
 import { Link } from 'react-router-dom';
 import {
   Scissors, Calendar, Sparkles, TrendingUp, MapPin,
   CheckCircle2, ArrowRight, Star, Users, Zap,
-  Shield, BarChart3, Clock, Navigation
+  Shield, BarChart3, Clock, Navigation, Bell, MessageSquare
 } from 'lucide-react';
 import { PublicHeader } from '../components/marketplace/PublicHeader';
 
@@ -12,6 +17,58 @@ const HERO_SLIDES = [
   'https://growmoneydigital.com.br/barberflow/02.jpg',
   'https://growmoneydigital.com.br/barberflow/03.jpg',
 ];
+
+const FAKE_NOTIFICATIONS = [
+  { title: 'Novo agendamento!', desc: 'Gabriel agendou Corte + Barba na Barbearia Vintage.', icon: Calendar },
+  { title: 'Nova adesão ao APP', desc: 'Navalha de Ouro acaba de se cadastrar no BarberFlow.', icon: MapPin },
+  { title: 'Lembrete enviado!', desc: 'Seu cliente João Visualizou a notificação de retorno.', icon: MessageSquare },
+  { title: 'Fidelidade Batida', desc: 'Carlos acaba de resgatar 50 pontos por uma pomada.', icon: Star },
+];
+
+function LiveToast() {
+  const [notification, setNotification] = useState<typeof FAKE_NOTIFICATIONS[0] | null>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    let timeout: number;
+    // Pimeiro push bem rápido para impressionar (demo)
+    const firstTimer = window.setTimeout(() => {
+      setNotification(FAKE_NOTIFICATIONS[0]);
+      setVisible(true);
+      timeout = window.setTimeout(() => setVisible(false), 5000);
+    }, 4000);
+
+    const interval = window.setInterval(() => {
+      const idx = Math.floor(Math.random() * FAKE_NOTIFICATIONS.length);
+      setNotification(FAKE_NOTIFICATIONS[idx]);
+      setVisible(true);
+      timeout = window.setTimeout(() => setVisible(false), 5000);
+    }, 15000); // 15 em 15 segundos para fins de demonstração (substituindo os 30)
+
+    return () => { 
+      clearTimeout(firstTimer); 
+      clearTimeout(timeout); 
+      clearInterval(interval); 
+    };
+  }, []);
+
+  return (
+    <div className={`fixed bottom-6 right-6 z-[100] w-72 sm:w-80 rounded-2xl border border-white/10 bg-[#0c0c0c]/95 backdrop-blur-xl p-4 shadow-[0_10px_40px_rgba(163,230,53,0.15)] transition-all duration-700 transform ${visible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-12 opacity-0 pointer-events-none scale-95'}`}>
+      <div className="flex items-start gap-4">
+         <div className="w-10 h-10 rounded-full bg-lime-400/20 flex flex-col items-center justify-center shrink-0 border border-lime-400/30">
+           {notification?.icon && <notification.icon className="w-4 h-4 text-lime-400" />}
+         </div>
+         <div>
+           <div className="flex items-center gap-2 mb-1">
+             <h4 className="text-sm font-bold text-white leading-none">{notification?.title}</h4>
+             <span className="text-[10px] text-lime-400 font-bold tracking-wider uppercase ml-auto">Agora</span>
+           </div>
+           <p className="text-xs text-slate-400 leading-snug">{notification?.desc}</p>
+         </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Typewriter phrases ──────────────────────────────────────────────
 
@@ -130,14 +187,67 @@ export const LandingPage: React.FC = () => {
     return () => window.clearInterval(interval);
   }, []);
 
+  useGSAP(() => {
+    // Scroll reveals
+    const sections = gsap.utils.toArray('.gsap-reveal');
+    sections.forEach((section: any) => {
+      gsap.fromTo(
+        section,
+        { opacity: 0, y: 70 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 1.2,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 85%',
+          },
+        }
+      );
+    });
+
+    // Feature cards stagger
+    gsap.from('.gsap-card', {
+      scrollTrigger: {
+        trigger: '#recursos',
+        start: 'top 75%',
+      },
+      y: 50,
+      opacity: 0,
+      stagger: 0.15,
+      duration: 1,
+      ease: 'back.out(1.2)'
+    });
+
+    // Phones/Screens specific reveal
+    const phones = gsap.utils.toArray('.perspective-1000');
+    phones.forEach((phone: any) => {
+      gsap.from(phone, {
+        scrollTrigger: {
+          trigger: phone,
+          start: 'top 85%',
+        },
+        rotateY: 20,
+        rotateX: 20,
+        y: 100,
+        opacity: 0,
+        duration: 1.5,
+        ease: 'power3.out'
+      });
+    });
+
+  }, []);
+
   return (
     <div className="marketplace-shell min-h-screen overflow-x-hidden bg-[#070707] font-sans text-slate-100 selection:bg-lime-400 selection:text-black">
       <PublicHeader />
+      <LiveToast />
 
       {/* ═══════════════════════════════════════════════════════════
           HERO SECTION
           ═══════════════════════════════════════════════════════ */}
-      <section className="relative pb-16 pt-24 sm:pb-20 sm:pt-28 lg:pb-28 lg:pt-40">
+      <section className="relative flex h-[100dvh] min-h-[600px] w-full flex-col items-center justify-between overflow-hidden pt-24 sm:pt-28 lg:pt-32">
         <div className="absolute inset-0 overflow-hidden">
           {HERO_SLIDES.map((image, index) => (
             <div
@@ -157,7 +267,7 @@ export const LandingPage: React.FC = () => {
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] md:w-[700px] md:h-[700px] bg-lime-400/15 blur-[150px] rounded-full pointer-events-none" />
         <div className="absolute top-2/3 right-0 w-[300px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
         
-        <div className="relative z-10 mx-auto max-w-7xl px-4 text-center sm:px-5 md:px-6">
+        <div className="relative z-10 mx-auto flex w-full flex-1 md:mt-10 flex-col items-center justify-center max-w-7xl px-4 text-center sm:px-5 md:px-6">
           {/* Badge */}
           <div className="marketplace-kicker mb-8 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 py-2 text-xs font-medium text-lime-400 animate-fade-in-up sm:text-sm">
             <Sparkles className="w-3.5 h-3.5" /> Novo: Visagismo com Inteligência Artificial
@@ -190,9 +300,10 @@ export const LandingPage: React.FC = () => {
               <MapPin className="w-4 h-4" /> Explorar Barbearias
             </Link>
           </div>
+        </div>
 
-          {/* Dashboard Mock */}
-          <div className="mt-16 sm:mt-20 relative mx-auto max-w-5xl animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+        {/* Dashboard Mock */}
+        <div className="mt-8 sm:mt-12 relative mx-auto w-full max-w-5xl px-4 sm:px-6 animate-fade-in-up translate-y-6 sm:translate-y-12" style={{ animationDelay: '400ms' }}>
             <div className="absolute inset-0 bg-gradient-to-t from-[#070707] via-transparent to-transparent z-10 pointer-events-none" />
             <div className="rounded-t-2xl border border-white/10 border-b-0 bg-[#0c0c0c] p-1.5 shadow-2xl shadow-black/50">
               <div className="rounded-xl border border-white/[0.06] bg-[#111] w-full relative overflow-hidden flex" style={{ height: 'clamp(280px, 40vw, 550px)' }}>
@@ -228,7 +339,6 @@ export const LandingPage: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
         </div>
       </section>
 
@@ -260,8 +370,11 @@ export const LandingPage: React.FC = () => {
       {/* ═══════════════════════════════════════════════════════════
           FEATURES BENTO GRID
           ═══════════════════════════════════════════════════════ */}
-      <section id="recursos" className="py-20 md:py-28 relative z-10">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6">
+      <section id="recursos" className="py-20 md:py-28 relative overflow-hidden gsap-reveal">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] pointer-events-none" />
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-lime-400/10 blur-[160px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-500/10 blur-[150px] rounded-full pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 relative z-10">
           <SectionHeader
             title="Tudo que sua barbearia precisa"
             subtitle="Uma plataforma completa que substitui todos os outros sistemas que você usa hoje."
@@ -269,7 +382,7 @@ export const LandingPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4 md:gap-5">
             {/* Feature 1: Agenda - spans 4 */}
-            <FeatureCard className="md:col-span-4" icon={Calendar} title="Agenda Inteligente">
+            <FeatureCard className="md:col-span-4 gsap-card" icon={Calendar} title="Agenda Inteligente">
               <p className="text-slate-400 text-sm mb-6 max-w-md">
                 Diga adeus ao WhatsApp e caderninho. Seus clientes agendam sozinhos 24/7, com lembretes automáticos para reduzir faltas.
               </p>
@@ -286,7 +399,7 @@ export const LandingPage: React.FC = () => {
             </FeatureCard>
 
             {/* Feature 2: Visagismo - spans 2 */}
-            <FeatureCard className="md:col-span-2" icon={Sparkles} title="Visagismo IA">
+            <FeatureCard className="md:col-span-2 gsap-card" icon={Sparkles} title="Visagismo IA">
               <p className="text-slate-400 text-sm">
                 Ofereça uma experiência premium. Nossa IA analisa o rosto do cliente e sugere os melhores cortes para seu formato facial.
               </p>
@@ -304,7 +417,7 @@ export const LandingPage: React.FC = () => {
             </FeatureCard>
 
             {/* Feature 3: Marketplace - spans 2 */}
-            <FeatureCard className="md:col-span-2" icon={MapPin} title="Marketplace & Mapas">
+            <FeatureCard className="md:col-span-2 gsap-card" icon={MapPin} title="Marketplace & Mapas">
               <p className="text-slate-400 text-sm">
                 Seja descoberto por milhares de clientes na sua região. Mapas interativos com Mapbox e rotas em tempo real.
               </p>
@@ -319,7 +432,7 @@ export const LandingPage: React.FC = () => {
             </FeatureCard>
 
             {/* Feature 4: Gestão - spans 4 */}
-            <FeatureCard className="md:col-span-4" icon={TrendingUp} title="Gestão Financeira e Comissões">
+            <FeatureCard className="md:col-span-4 gsap-card" icon={TrendingUp} title="Gestão Financeira e Comissões">
               <p className="text-slate-400 text-sm mb-6 max-w-md">
                 Controle total do seu faturamento. Split de pagamentos automático e cálculo de comissões da equipe em tempo real.
               </p>
@@ -345,10 +458,90 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
+          APP SHOWCASE (B2C)
+          ═══════════════════════════════════════════════════════ */}
+      <section className="py-20 md:py-32 relative overflow-hidden bg-[radial-gradient(ellipse_at_top,rgba(163,230,53,0.06),transparent_60%)] gsap-reveal">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 relative z-10 flex flex-col lg:flex-row items-center gap-16 lg:gap-20">
+          <div className="flex-1 text-left">
+            <div className="inline-flex items-center gap-2 rounded-full border border-lime-400/20 bg-lime-400/10 px-4 py-2 text-xs font-medium text-lime-400 mb-6">
+              <Sparkles className="w-3.5 h-3.5" /> Experiência do Cliente
+            </div>
+            <h2 className="marketplace-fluid-section text-white mb-6">Sua barbearia na palma da mão do cliente</h2>
+            <p className="text-slate-400 text-lg mb-8 leading-relaxed max-w-lg">
+              Ao assinar o BarberFlow, não é só um painel de gestão. Seus clientes ganham acesso a um aplicativo PWA moderno e rápido para agendar, gerenciar pontos e acompanhar o histórico de cortes pelo celular!
+            </p>
+            <ul className="space-y-5 mb-8">
+              {[
+                { title: 'Agendamento em 3 cliques', desc: 'Sem complicação com WhatsApp ou esperas.' },
+                { title: 'Programa de Fidelidade', desc: 'Pontos e prêmios geridos em tempo real pelo painel.' },
+                { title: 'Histórico de Estilos', desc: 'Galeria privada de cortes salvos pelo cliente.' },
+              ].map((ft, idx) => (
+                <li key={idx} className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-lime-400/10 border border-lime-400/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <CheckCircle2 className="w-4 h-4 text-lime-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white mb-1">{ft.title}</h4>
+                    <p className="text-sm text-slate-500">{ft.desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <Link to="/onboarding" className="inline-flex items-center gap-2 font-bold text-lime-400 hover:text-lime-300 hover:underline">
+              Explorar recursos da plataforma <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+          <div className="flex-1 w-full max-w-sm mx-auto relative perspective-1000">
+            {/* Phone Mockup Frame */}
+            <div className="relative mx-auto aspect-[9/19] w-full rounded-[2.5rem] border-[8px] border-black bg-black shadow-2xl overflow-hidden ring-1 ring-white/10 transform-gpu rotate-y-[-10deg] rotate-x-[5deg] hover:rotate-y-0 hover:rotate-x-0 transition-transform duration-700">
+              {/* Dynamic screen content imitating the B2C Dashboard */}
+              <div className="h-full w-full bg-[#050505] flex flex-col p-5">
+                <div className="flex justify-between items-center mb-6 mt-4">
+                    <div className="flex items-center gap-2">
+                       <div className="w-8 h-8 bg-lime-400 rounded-lg"></div>
+                       <div className="w-20 h-4 bg-white/20 rounded-md"></div>
+                    </div>
+                </div>
+                
+                <div className="w-full h-32 bg-[radial-gradient(circle_at_top_right,rgba(163,230,53,0.15),transparent_60%)] rounded-2xl mb-4 border border-white/10 p-5 flex flex-col">
+                  <div className="w-8 h-8 bg-lime-400/20 text-lime-400 rounded-full mb-auto flex items-center justify-center text-xs font-bold">PT</div>
+                  <div className="h-5 w-1/2 bg-white/80 rounded-md mb-2"></div>
+                  <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
+                      <div className="h-full w-[80%] bg-lime-400"></div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="h-24 bg-white/5 rounded-2xl border border-white/5 p-3 flex flex-col justify-end">
+                     <div className="h-2 w-10 bg-white/20 rounded mb-2"></div>
+                     <div className="h-3 w-16 bg-white/40 rounded"></div>
+                  </div>
+                  <div className="h-24 bg-white/5 rounded-2xl border border-white/5 p-3 flex flex-col justify-end">
+                     <div className="h-2 w-10 bg-white/20 rounded mb-2"></div>
+                     <div className="h-3 w-16 bg-white/40 rounded"></div>
+                  </div>
+                </div>
+
+                <div className="mt-auto h-20 w-full bg-white/[0.03] rounded-t-3xl border-t border-white/10 flex items-center justify-around px-2">
+                  <div className="w-6 h-6 bg-lime-400/40 rounded-full"></div>
+                  <div className="w-6 h-6 bg-white/10 rounded-full"></div>
+                  <div className="w-6 h-6 bg-white/10 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+            {/* Decorative blurs */}
+            <div className="absolute top-1/4 -right-12 w-48 h-48 bg-lime-400/20 blur-[80px] rounded-full -z-10" />
+            <div className="absolute bottom-1/4 -left-12 w-48 h-48 bg-emerald-400/20 blur-[80px] rounded-full -z-10" />
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════
           HOW IT WORKS
           ═══════════════════════════════════════════════════════ */}
-      <section className="py-20 md:py-28 bg-white/[0.01] border-y border-white/[0.05]">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6">
+      <section className="py-20 md:py-28 bg-[#040905] border-y border-white/[0.05] relative overflow-hidden gsap-reveal">
+        <div className="absolute top-1/2 left-0 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/15 blur-[160px] rounded-full pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 relative z-10">
           <SectionHeader
             title="Simples de começar"
             subtitle="Em 3 passos você já está no ar com tudo funcionando."
@@ -376,10 +569,100 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
+          AUTOMATION & NOTIFICATIONS
+          ═══════════════════════════════════════════════════════ */}
+      <section className="py-20 md:py-28 relative overflow-hidden bg-[#020502] gsap-reveal">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.1),transparent_50%)] pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 relative z-10 flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
+          <div className="flex-1 text-left">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-medium text-emerald-400 mb-6">
+              <Bell className="w-3.5 h-3.5" /> Automação de Retenção
+            </div>
+            <h2 className="marketplace-fluid-section text-white mb-6">Lembretes por WhatsApp e Push Notifications</h2>
+            <p className="text-slate-400 text-lg mb-8 leading-relaxed max-w-lg">
+              Reduza suas faltas a zero! O BarberFlow possui um disparo super ativo de mensagens e notificações Push nativas. Tudo trabalha sozinho a cada agendamento feito, economizando horas da sua recepção.
+            </p>
+            <ul className="space-y-4 mb-8">
+              {[
+                { title: 'Aviso de Agendamento', desc: 'Cliente recebe uma notificação assim que marcar.' },
+                { title: 'Lembrete de Véspera', desc: 'Disparo 2 horas antes de cada atendimento.' },
+                { title: 'Alertas na Tela', desc: 'O barbeiro vê as notificações de tempo real no painel.' },
+              ].map((ft, idx) => (
+                <li key={idx} className="flex gap-4">
+                  <div className="w-6 h-6 rounded-full bg-emerald-400/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-white mb-0.5">{ft.title}</h4>
+                    <p className="text-sm text-slate-500">{ft.desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          <div className="flex-1 w-full max-w-md mx-auto relative perspective-1000">
+            {/* Notifications Showcase */}
+            <div className="relative w-full h-[450px] flex flex-col justify-center gap-5">
+               <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent z-10 pointer-events-none" />
+               
+               <div className="animate-fade-in-up bg-[#111] border border-white/10 rounded-2xl p-4 shadow-xl ml-8 -rotate-2 transform-gpu hover:rotate-0 transition-transform cursor-default relative z-10" style={{ animationDelay: '1000ms' }}>
+                 <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-full bg-emerald-400/20 shrink-0 flex items-center justify-center">
+                     <MessageSquare className="w-4 h-4 text-emerald-400" />
+                   </div>
+                   <div>
+                     <div className="font-bold text-sm text-white">Mensagem Recebida</div>
+                     <div className="text-xs text-slate-400">João enviou uma resposta!</div>
+                   </div>
+                   <div className="ml-auto text-[10px] text-slate-500">10m</div>
+                 </div>
+               </div>
+               
+               <div className="animate-fade-in-up bg-lime-400/10 border border-lime-400/20 rounded-2xl p-4 shadow-[0_0_30px_rgba(163,230,53,0.15)] -ml-4 rotate-1 transform-gpu hover:-translate-y-1 hover:rotate-0 transition-all z-20 relative cursor-default" style={{ animationDelay: '500ms' }}>
+                 <div className="absolute top-0 right-0 p-2 opacity-50">
+                   <span className="flex h-2 w-2">
+                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
+                     <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
+                   </span>
+                 </div>
+                 <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-full bg-lime-400 text-black shrink-0 flex items-center justify-center shadow-lg">
+                     <Bell className="w-4 h-4" />
+                   </div>
+                   <div>
+                     <div className="font-bold text-sm text-lime-400">Notificação Push (App)</div>
+                     <div className="text-xs text-slate-300">"Guilherme, seu corte é hoje às 15:00!"</div>
+                   </div>
+                   <div className="ml-auto text-[10px] font-bold text-lime-400">AGORA</div>
+                 </div>
+               </div>
+
+               <div className="animate-fade-in-up bg-[#111] border border-white/10 rounded-2xl p-4 shadow-xl ml-6 -rotate-1 transform-gpu hover:rotate-0 transition-transform relative z-0 cursor-default" style={{ animationDelay: '1500ms' }}>
+                 <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-full bg-yellow-400/20 shrink-0 flex items-center justify-center">
+                     <Star className="w-4 h-4 text-yellow-400" />
+                   </div>
+                   <div>
+                     <div className="font-bold text-sm text-white">Nova Avaliação 5★</div>
+                     <div className="text-xs text-slate-400">"Atendimento impecável..."</div>
+                   </div>
+                   <div className="ml-auto text-[10px] text-slate-500">2h</div>
+                 </div>
+               </div>
+            </div>
+            {/* Decorative blurs */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-emerald-400/15 blur-[120px] rounded-full -z-10" />
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════
           TESTIMONIALS
           ═══════════════════════════════════════════════════════ */}
-      <section className="py-20 md:py-28">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6">
+      <section className="py-20 md:py-28 relative overflow-hidden bg-[#070707] gsap-reveal">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-lime-400/10 blur-[160px] rounded-full pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 relative z-10">
           <SectionHeader
             title="O que nossos clientes dizem"
             subtitle="Barbearias de todo o Brasil já transformaram seus negócios."
@@ -427,8 +710,9 @@ export const LandingPage: React.FC = () => {
       {/* ═══════════════════════════════════════════════════════════
           PRICING
           ═══════════════════════════════════════════════════════ */}
-      <section id="planos" className="py-20 md:py-28 bg-white/[0.01] border-y border-white/[0.05]">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6">
+      <section id="planos" className="py-20 md:py-28 bg-[#040804] border-y border-white/[0.05] relative overflow-hidden gsap-reveal">
+        <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[600px] h-[600px] bg-lime-500/10 blur-[180px] rounded-full pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 relative z-10">
           <SectionHeader
             title="Planos simples e transparentes"
             subtitle="Escolha o plano ideal para o momento da sua barbearia."
@@ -516,9 +800,40 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
+          FAQ SECTION
+          ═══════════════════════════════════════════════════════ */}
+      <section className="py-20 md:py-28 max-w-4xl mx-auto px-5 sm:px-6 relative z-10 gsap-reveal">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/10 blur-[180px] rounded-full pointer-events-none" />
+        <SectionHeader
+          title="Perguntas Frequentes"
+          subtitle="Tire suas dúvidas e veja como a plataforma é simples de adotar."
+        />
+        <div className="space-y-4">
+          {[
+            { q: 'Preciso instalar algum sistema no computador da barbearia?', a: 'Não! O BarberFlow funciona 100% na nuvem. Você acessa o painel de qualquer navegador celular, tablet ou computador atualizado, sem complicações ou instalações demoradas.' },
+            { q: 'Meus clientes precisam baixar algum App pesado nas lojas?', a: 'Não necessitam! O portal do cliente opera como um Aplicativo Web Progressivo (PWA). O cliente recebe o link pelo WhatsApp ou acessa o site, se cadastra e a agenda rola ali mesmo com a fluidez de um app nativo.' },
+            { q: 'Existe tempo de carência ou fidelidade no plano?', a: 'Nenhum contato longo te prende. Assinando nossos planos você é livre para cancelar quando quiser. O compromisso de fazer você amar o sistema a ponto de ficar é todo nosso!' },
+            { q: 'Como divido o dinheiro com os barbeiros da equipe?', a: 'No painel você configura o repasse % de cada um. A plataforma faz as contas automaticamente e gera as notas e relatórios de comissionamento debaixo da tabela de faturamento a pagar, sem dores de cabeça com caderninhos ou calculadoras no fechamento!' },
+          ].map((faq, idx) => (
+            <details key={idx} className="group rounded-2xl border border-white/10 bg-white/[0.02] [&_summary::-webkit-details-marker]:hidden transition-colors hover:bg-white/[0.04]">
+              <summary className="flex cursor-pointer items-center justify-between gap-4 p-6 font-bold text-white outline-none">
+                {faq.q}
+                <span className="shrink-0 transition duration-300 group-open:-rotate-180">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-lime-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                </span>
+              </summary>
+              <div className="px-6 pb-6 text-sm text-slate-400 leading-relaxed border-t border-white/5 pt-4">
+                {faq.a}
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════
           CTA SECTION
           ═══════════════════════════════════════════════════════ */}
-      <section className="py-20 md:py-28 relative overflow-hidden">
+      <section className="py-20 md:py-28 relative overflow-hidden gsap-reveal">
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/[0.06] via-transparent to-emerald-400/[0.04]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-lime-400/10 blur-[120px] rounded-full pointer-events-none" />
         

@@ -20,6 +20,7 @@ View your app in AI Studio: https://ai.studio/apps/358c8ec4-0ab1-4e4e-8d93-d22eb
    - `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` (recommended)
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
    - `SUPABASE_URL` (server-side only)
+   - `SUPABASE_SERVICE_ROLE_KEY` (preferred for Auth Admin / Netlify Functions)
    - `SUPABASE_SECRET_KEY` (server-side only, never with `VITE_`)
 4. Optionally set `GEMINI_API_KEY` for AI features
 5. Run:
@@ -57,6 +58,8 @@ After the migration is applied:
 - owner login is routed by `profiles.role` and onboarding status
 - onboarding saves the barbershop, business hours and services to Supabase
 - marketplace pages can read active barbershops from Supabase with fallback to the demo data
+- `/b/:slug` now checks real availability and writes public bookings directly into `appointments`
+- `/admin/equipe` can invite real staff users through Supabase Auth and sync `profiles`, `barbershop_memberships` and `barbers`
 
 ## Deploy
 
@@ -68,10 +71,14 @@ After the migration is applied:
    - `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` (recommended)
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
    - `SUPABASE_URL` (server-side)
+   - `SUPABASE_SERVICE_ROLE_KEY` (preferred for invite flow and admin server functions)
    - `SUPABASE_SECRET_KEY` (server-side)
 2. Do not expose sensitive keys in frontend variables (for example Supabase secret key).
 3. For server validation, this repo includes:
    - `/.netlify/functions/supabase-admin-health`
+   - `/.netlify/functions/public-booking-availability`
+   - `/.netlify/functions/public-booking`
+   - `/.netlify/functions/invite-staff`
 4. Trigger a new deploy (`Trigger deploy > Clear cache and deploy site`).
 5. `netlify.toml` is already configured to:
    - run `npm run build`
@@ -88,7 +95,8 @@ Use `amplify.yml` and configure:
 - `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_URL` (for backend/SSR/Lambda usage)
+- `SUPABASE_SERVICE_ROLE_KEY` (preferred for backend auth admin flows)
 - `SUPABASE_SECRET_KEY` (for backend/SSR/Lambda usage)
 - `GEMINI_API_KEY` (optional)
 
-Important for Amplify: `SUPABASE_SECRET_KEY` should be consumed only by backend compute (Lambda, SSR, API). Do not inject it into frontend code or variables prefixed with `VITE_`.
+Important for Amplify: `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_SECRET_KEY` should be consumed only by backend compute (Lambda, SSR, API). Do not inject them into frontend code or variables prefixed with `VITE_`.

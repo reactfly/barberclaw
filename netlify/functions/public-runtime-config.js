@@ -17,7 +17,7 @@ const pickFirst = (...values) => {
   return '';
 };
 
-exports.handler = async () => {
+export const handler = async () => {
   const payload = {
     mapboxToken: pickFirst(process.env.PUBLIC_MAPBOX_TOKEN, process.env.VITE_MAPBOX_TOKEN),
     supabaseUrl: pickFirst(
@@ -30,15 +30,15 @@ exports.handler = async () => {
       process.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
       process.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
       process.env.VITE_SUPABASE_PUBLISHABLE_KEY
-    )
+    ),
   };
 
   return {
     statusCode: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'no-store'
+      'Cache-Control': 'no-store',
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   };
 };

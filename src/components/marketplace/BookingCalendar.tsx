@@ -1,18 +1,15 @@
-import React, { useState } from 'react';
-import { addDays, addWeeks, format, isBefore, isSameDay, set, startOfDay, startOfWeek, subWeeks } from 'date-fns';
+import React, { useEffect, useState } from 'react';
+import { addDays, addWeeks, format, isBefore, isSameDay, startOfDay, startOfWeek, subWeeks } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Clock3, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock3, Loader2, Sparkles } from 'lucide-react';
+import { getPublicAvailability } from '../../lib/publicBookingApi';
 
 interface BookingCalendarProps {
+  shopId: string;
+  barberId: string | null;
   durationMinutes?: number;
   onSelectDateTime: (date: Date, time: string) => void;
 }
-
-const AVAILABLE_TIMES = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
-  '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
-];
 
 const TIME_GROUPS = [
   { label: 'Manha', match: (time: string) => Number(time.split(':')[0]) < 12 },
@@ -20,10 +17,19 @@ const TIME_GROUPS = [
   { label: 'Noite', match: (time: string) => Number(time.split(':')[0]) >= 18 },
 ];
 
-export const BookingCalendar: React.FC<BookingCalendarProps> = ({ durationMinutes, onSelectDateTime }) => {
+export const BookingCalendar: React.FC<BookingCalendarProps> = ({
+  shopId,
+  barberId,
+  durationMinutes,
+  onSelectDateTime,
+}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [availableTimesForDate, setAvailableTimesForDate] = useState<string[]>([]);
+  const [availabilityMessage, setAvailabilityMessage] = useState('');
+  const [hoursLabel, setHoursLabel] = useState<string | null>(null);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
 
   const today = startOfDay(new Date());
   const startDate = startOfWeek(currentDate, { weekStartsOn: 0 });
@@ -36,16 +42,78 @@ export const BookingCalendar: React.FC<BookingCalendarProps> = ({ durationMinute
     }
   };
 
-  const isPastTime = (date: Date, time: string) => {
-    const [hours, minutes] = time.split(':').map(Number);
-    const slotDate = set(date, { hours, minutes, seconds: 0, milliseconds: 0 });
-    return slotDate.getTime() < Date.now();
-  };
+  useEffect(() => {
+    setSelectedTime(null);
+    setAvailableTimesForDate([]);
+    setAvailabilityMessage('');
+    setHoursLabel(null);
+  }, [barberId, durationMinutes, shopId]);
 
-  const availableTimesForDate =
-    selectedDate === null
-      ? []
-      : AVAILABLE_TIMES.filter((time) => !isSameDay(selectedDate, today) || !isPastTime(selectedDate, time));
+  useEffect(() => {
+    if (!selectedDate) {
+      setAvailableTimesForDate([]);
+      setAvailabilityMessage('');
+      setHoursLabel(null);
+      return;
+    }
+
+    if (!shopId || !barberId || !durationMinutes) {
+      setAvailableTimesForDate([]);
+      setHoursLabel(null);
+      setAvailabilityMessage('Escolha um profissional e um servico para ver horarios reais.');
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingAvailability(true);
+    setAvailabilityMessage('');
+
+    getPublicAvailability({
+      shopId,
+      barberId,
+      appointmentDate: format(selectedDate, 'yyyy-MM-dd'),
+      durationMinutes,
+    })
+      .then((availability) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setAvailableTimesForDate(availability.slots);
+        setAvailabilityMessage(
+          availability.slots.length > 0
+            ? ''
+            : availability.message || 'Nao encontramos horarios livres para esta data.'
+        );
+        setHoursLabel(
+          availability.opensAt && availability.closesAt
+            ? `${availability.opensAt} - ${availability.closesAt}`
+            : null
+        );
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setAvailableTimesForDate([]);
+        setAvailabilityMessage(
+          error instanceof Error
+            ? error.message
+            : 'Nao foi possivel carregar a disponibilidade agora.'
+        );
+        setHoursLabel(null);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingAvailability(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [barberId, durationMinutes, selectedDate, shopId]);
 
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
@@ -65,6 +133,7 @@ export const BookingCalendar: React.FC<BookingCalendarProps> = ({ durationMinute
           <p className="mt-1 text-sm text-slate-400">
             {durationMinutes ? `Servico previsto para ${durationMinutes} min.` : 'Selecione uma data e veja os horarios disponiveis.'}
           </p>
+          {hoursLabel ? <p className="mt-1 text-xs text-slate-500">Horario da casa: {hoursLabel}</p> : null}
         </div>
 
         <div className="flex gap-2">
@@ -132,9 +201,14 @@ export const BookingCalendar: React.FC<BookingCalendarProps> = ({ durationMinute
             </h4>
           </div>
 
-          {availableTimesForDate.length === 0 ? (
+          {isLoadingAvailability ? (
+            <div className="flex items-center gap-3 rounded-[24px] border border-white/10 bg-white/[0.02] px-4 py-5 text-sm text-slate-300">
+              <Loader2 className="h-4 w-4 animate-spin text-lime-300" />
+              Buscando disponibilidade em tempo real...
+            </div>
+          ) : availableTimesForDate.length === 0 ? (
             <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-sm text-slate-400">
-              Nao encontramos horarios livres para esta data. Escolha outro dia para continuar.
+              {availabilityMessage || 'Nao encontramos horarios livres para esta data. Escolha outro dia para continuar.'}
             </div>
           ) : (
             <div className="space-y-4">

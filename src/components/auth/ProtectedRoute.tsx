@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2, Scissors } from 'lucide-react';
 import { getCurrentSessionContext } from '../../lib/auth';
 
-type ProtectedRouteMode = 'admin' | 'onboarding';
+type ProtectedRouteMode = 'admin' | 'onboarding' | 'customer';
 
 interface AccessState {
   isLoading: boolean;
@@ -68,7 +68,7 @@ export const ProtectedRoute: React.FC<{
 
         if (mode === 'admin') {
           if (profile.role === 'customer') {
-            redirectTo = '/marketplace';
+            redirectTo = '/painel';
           } else if (isOwnerIncomplete) {
             redirectTo = '/onboarding';
           }
@@ -76,9 +76,15 @@ export const ProtectedRoute: React.FC<{
 
         if (mode === 'onboarding') {
           if (profile.role === 'customer' || profile.role === 'staff') {
-            redirectTo = profile.role === 'customer' ? '/marketplace' : '/admin';
+            redirectTo = profile.role === 'customer' ? '/painel' : '/admin';
           } else if (!isOwnerIncomplete) {
             redirectTo = '/admin';
+          }
+        }
+
+        if (mode === 'customer') {
+          if (profile.role !== 'customer') {
+            redirectTo = isOwnerIncomplete ? '/onboarding' : '/admin';
           }
         }
 
