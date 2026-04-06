@@ -82,11 +82,13 @@ export const Marketplace: React.FC = () => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapboxToken, setMapboxToken] = useState('');
   const [isMapboxConfigResolved, setIsMapboxConfigResolved] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const resizeFrameRef = useRef<number | null>(null);
 
   const { location: userLocation, status: geoStatus, error: geoError, requestLocation } = useGeolocation();
 
@@ -199,6 +201,7 @@ export const Marketplace: React.FC = () => {
   useEffect(() => {
     if (!mapboxToken || !mapContainerRef.current || mapRef.current || shops.length === 0) return;
 
+    setMapError(null);
     mapboxgl.accessToken = mapboxToken;
 
     const map = new mapboxgl.Map({
@@ -213,19 +216,71 @@ export const Marketplace: React.FC = () => {
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-left');
 
+    map.on('error', (event) => {
+      const errorMessage =
+        event.error instanceof Error
+          ? event.error.message
+          : 'Nao foi possivel carregar os recursos do mapa agora.';
+      setMapError(errorMessage);
+    });
+
     map.on('load', () => {
       setMapLoaded(true);
+      setMapError(null);
+      map.resize();
     });
 
     mapRef.current = map;
 
     return () => {
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
       setMapLoaded(false);
       markersRef.current.clear();
     };
   }, [mapboxToken, shops]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const triggerResize = () => {
+      if (!mapRef.current) return;
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+      }
+
+      resizeFrameRef.current = window.requestAnimationFrame(() => {
+        mapRef.current?.resize();
+        resizeFrameRef.current = null;
+      });
+    };
+
+    const observer = mapContainerRef.current
+      ? new ResizeObserver(() => {
+          triggerResize();
+        })
+      : null;
+
+    if (mapContainerRef.current && observer) {
+      observer.observe(mapContainerRef.current);
+    }
+
+    triggerResize();
+    window.addEventListener('resize', triggerResize);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', triggerResize);
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
+    };
+  }, [mapboxToken, mobileView, selectedShopId]);
 
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
@@ -678,6 +733,18 @@ export const Marketplace: React.FC = () => {
                       <div className="text-center">
                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-lime-300" />
                         <p className="mt-3 text-sm text-slate-400">Carregando mapa inteligente...</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {mapError && (
+                    <div className="absolute left-3 right-3 top-16 z-20 rounded-2xl border border-red-500/20 bg-black/80 px-4 py-3 backdrop-blur-md sm:left-4 sm:right-4 sm:top-20">
+                      <div className="flex items-start gap-3">
+                        <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+                        <div>
+                          <p className="text-sm font-medium text-red-300">Falha ao carregar o mapa</p>
+                          <p className="mt-1 text-xs leading-relaxed text-slate-300">{mapError}</p>
+                        </div>
                       </div>
                     </div>
                   )}

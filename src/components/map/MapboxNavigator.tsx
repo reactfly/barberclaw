@@ -51,12 +51,14 @@ export const MapboxNavigator: React.FC<MapboxNavigatorProps> = ({ barbershop, cl
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const shopMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const resizeFrameRef = useRef<number | null>(null);
 
   const [mapLoaded, setMapLoaded] = useState(false);
   const [travelMode, setTravelMode] = useState<TravelMode>('driving');
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [routeStatus, setRouteStatus] = useState<RouteStatus>('idle');
   const [routeError, setRouteError] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [showExternalNav, setShowExternalNav] = useState(false);
   const [straightLineDistance, setStraightLineDistance] = useState<number | null>(null);
@@ -95,6 +97,7 @@ export const MapboxNavigator: React.FC<MapboxNavigatorProps> = ({ barbershop, cl
   useEffect(() => {
     if (!mapboxToken || !mapContainerRef.current || mapRef.current) return;
 
+    setMapError(null);
     mapboxgl.accessToken = mapboxToken;
 
     const map = new mapboxgl.Map({
@@ -128,8 +131,18 @@ export const MapboxNavigator: React.FC<MapboxNavigatorProps> = ({ barbershop, cl
 
     shopMarkerRef.current = shopMarker;
 
+    map.on('error', (event) => {
+      const errorMessage =
+        event.error instanceof Error
+          ? event.error.message
+          : 'Nao foi possivel carregar os recursos do mapa agora.';
+      setMapError(errorMessage);
+    });
+
     map.on('load', () => {
       setMapLoaded(true);
+      setMapError(null);
+      map.resize();
 
       // Add route source (empty initially)
       map.addSource('route', {
@@ -168,10 +181,48 @@ export const MapboxNavigator: React.FC<MapboxNavigatorProps> = ({ barbershop, cl
     mapRef.current = map;
 
     return () => {
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
     };
   }, [mapboxToken, barbershop]);
+
+  useEffect(() => {
+    if (!mapRef.current || !mapContainerRef.current) return;
+
+    const triggerResize = () => {
+      if (!mapRef.current) return;
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+      }
+
+      resizeFrameRef.current = window.requestAnimationFrame(() => {
+        mapRef.current?.resize();
+        resizeFrameRef.current = null;
+      });
+    };
+
+    triggerResize();
+
+    const observer = new ResizeObserver(() => {
+      triggerResize();
+    });
+
+    observer.observe(mapContainerRef.current);
+    window.addEventListener('resize', triggerResize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', triggerResize);
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
+    };
+  }, [mapboxToken]);
 
   // ── Update user marker ─────────────────────────────────────────────
 
@@ -345,6 +396,18 @@ export const MapboxNavigator: React.FC<MapboxNavigatorProps> = ({ barbershop, cl
                 <div className="text-center">
                   <Loader2 className="w-8 h-8 text-lime-400 animate-spin mx-auto mb-3" />
                   <p className="text-slate-400 text-sm">Carregando mapa...</p>
+                </div>
+              </div>
+            )}
+
+            {mapError && (
+              <div className="absolute inset-x-4 top-4 z-30 rounded-2xl border border-red-500/20 bg-black/80 px-4 py-3 backdrop-blur-md">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+                  <div>
+                    <p className="text-sm font-medium text-red-300">Falha ao carregar o mapa</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-300">{mapError}</p>
+                  </div>
                 </div>
               </div>
             )}
