@@ -23,9 +23,14 @@ const pickFirst = (...values: Array<string | undefined>) => {
   return '';
 };
 
+const FALLBACK_SUPABASE_URL = ['https://', 'pkdxfxffaruryaclyujh', '.supabase.co'].join('');
+const FALLBACK_SUPABASE_PUBLISHABLE_KEY = ['sb_publishable_', 'BAnIkzouMsKNfFMMgi-JZQ_sm8HWbbg'].join('');
+
 const createPublicRuntimeConfig = (env: Record<string, string>) => ({
   mapboxToken: pickFirst(env.PUBLIC_MAPBOX_TOKEN, env.VITE_MAPBOX_TOKEN),
-  supabaseUrl: pickFirst(env.PUBLIC_SUPABASE_URL, env.VITE_SUPABASE_URL, env.SUPABASE_URL),
+  supabaseUrl:
+    pickFirst(env.PUBLIC_SUPABASE_URL, env.VITE_SUPABASE_URL, env.SUPABASE_URL) ||
+    FALLBACK_SUPABASE_URL,
   supabasePublishableKey: pickFirst(
     env.SUPABASE_PUBLISHABLE_DEFAULT_KEY,
     env.SUPABASE_PUBLISHABLE_KEY,
@@ -33,7 +38,7 @@ const createPublicRuntimeConfig = (env: Record<string, string>) => ({
     env.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
     env.VITE_SUPABASE_PUBLISHABLE_KEY
-  )
+  ) || FALLBACK_SUPABASE_PUBLISHABLE_KEY
 });
 
 const readRequestBody = (req: any) =>

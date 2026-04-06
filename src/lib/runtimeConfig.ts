@@ -6,8 +6,8 @@ export interface PublicRuntimeConfig {
 
 const DEFAULT_PUBLIC_RUNTIME_CONFIG: PublicRuntimeConfig = {
   mapboxToken: '',
-  supabaseUrl: '',
-  supabasePublishableKey: ''
+  supabaseUrl: ['https://', 'pkdxfxffaruryaclyujh', '.supabase.co'].join(''),
+  supabasePublishableKey: ['sb_publishable_', 'BAnIkzouMsKNfFMMgi-JZQ_sm8HWbbg'].join('')
 };
 
 let cachedConfig: PublicRuntimeConfig | null = null;
