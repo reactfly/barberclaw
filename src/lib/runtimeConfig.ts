@@ -4,10 +4,10 @@ export interface PublicRuntimeConfig {
   supabasePublishableKey: string;
 }
 
-const DEFAULT_PUBLIC_RUNTIME_CONFIG: PublicRuntimeConfig = {
+const EMPTY_PUBLIC_RUNTIME_CONFIG: PublicRuntimeConfig = {
   mapboxToken: '',
-  supabaseUrl: ['https://', 'pkdxfxffaruryaclyujh', '.supabase.co'].join(''),
-  supabasePublishableKey: ['sb_publishable_', 'BAnIkzouMsKNfFMMgi-JZQ_sm8HWbbg'].join('')
+  supabaseUrl: '',
+  supabasePublishableKey: ''
 };
 
 let cachedConfig: PublicRuntimeConfig | null = null;
@@ -23,7 +23,7 @@ const normalizeValue = (value: unknown): string => {
 
 const normalizeConfig = (value: unknown): PublicRuntimeConfig => {
   if (!value || typeof value !== 'object') {
-    return DEFAULT_PUBLIC_RUNTIME_CONFIG;
+    return EMPTY_PUBLIC_RUNTIME_CONFIG;
   }
 
   const config = value as Partial<PublicRuntimeConfig>;
@@ -35,7 +35,31 @@ const normalizeConfig = (value: unknown): PublicRuntimeConfig => {
   };
 };
 
+const getMissingRequiredFields = (config: PublicRuntimeConfig) =>
+  [
+    !config.supabaseUrl ? 'supabaseUrl' : '',
+    !config.supabasePublishableKey ? 'supabasePublishableKey' : '',
+  ].filter(Boolean);
+
+const buildMissingFieldsMessage = (missingFields: string[]) =>
+  `O endpoint /api/public-runtime-config respondeu sem ${missingFields.join(' e ')}. Verifique as variaveis PUBLIC_/VITE_/SUPABASE_ do ambiente.`;
+
+const getResponseErrorMessage = async (response: Response) => {
+  const fallbackMessage = `Nao foi possivel carregar a configuracao publica (${response.status}).`;
+
+  try {
+    const payload = (await response.json()) as { error?: string };
+    return payload.error || fallbackMessage;
+  } catch {
+    return fallbackMessage;
+  }
+};
+
 export const getCachedPublicRuntimeConfig = (): PublicRuntimeConfig | null => cachedConfig;
+export const resetPublicRuntimeConfigCache = () => {
+  cachedConfig = null;
+  configPromise = null;
+};
 
 export const getPublicRuntimeConfig = async (): Promise<PublicRuntimeConfig> => {
   if (cachedConfig) {
@@ -48,20 +72,15 @@ export const getPublicRuntimeConfig = async (): Promise<PublicRuntimeConfig> => 
     })
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error(`Nao foi possivel carregar a configuracao publica (${response.status}).`);
+          throw new Error(await getResponseErrorMessage(response));
         }
 
         const payload = await response.json();
         const config = normalizeConfig(payload);
-        const missingFields = [
-          !config.supabaseUrl ? 'supabaseUrl' : '',
-          !config.supabasePublishableKey ? 'supabasePublishableKey' : '',
-        ].filter(Boolean);
+        const missingFields = getMissingRequiredFields(config);
 
         if (missingFields.length > 0) {
-          throw new Error(
-            `O endpoint /api/public-runtime-config respondeu sem ${missingFields.join(' e ')}. Verifique as variaveis PUBLIC_/VITE_/SUPABASE_ do ambiente.`
-          );
+          throw new Error(buildMissingFieldsMessage(missingFields));
         }
 
         cachedConfig = config;

@@ -3,43 +3,24 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const require = createRequire(import.meta.url);
-
-const normalizeValue = (value: string | undefined) => {
-  if (!value) {
-    return '';
-  }
-
-  return value.trim().replace(/^['"]|['"]$/g, '');
+const publicRuntimeConfigUtils = require('./netlify/functions/_public-runtime-config.cjs');
+const {
+  buildMissingPublicRuntimeConfigMessage,
+  createPublicRuntimeConfig,
+  getMissingPublicRuntimeConfigFields,
+} = publicRuntimeConfigUtils as {
+  buildMissingPublicRuntimeConfigMessage: (missingFields: string[]) => string;
+  createPublicRuntimeConfig: (env?: Record<string, string | undefined>) => {
+    mapboxToken: string;
+    supabaseUrl: string;
+    supabasePublishableKey: string;
+  };
+  getMissingPublicRuntimeConfigFields: (config: {
+    mapboxToken: string;
+    supabaseUrl: string;
+    supabasePublishableKey: string;
+  }) => string[];
 };
-
-const pickFirst = (...values: Array<string | undefined>) => {
-  for (const value of values) {
-    const normalized = normalizeValue(value);
-    if (normalized) {
-      return normalized;
-    }
-  }
-
-  return '';
-};
-
-const FALLBACK_SUPABASE_URL = ['https://', 'pkdxfxffaruryaclyujh', '.supabase.co'].join('');
-const FALLBACK_SUPABASE_PUBLISHABLE_KEY = ['sb_publishable_', 'BAnIkzouMsKNfFMMgi-JZQ_sm8HWbbg'].join('');
-
-const createPublicRuntimeConfig = (env: Record<string, string>) => ({
-  mapboxToken: pickFirst(env.PUBLIC_MAPBOX_TOKEN, env.VITE_MAPBOX_TOKEN),
-  supabaseUrl:
-    pickFirst(env.PUBLIC_SUPABASE_URL, env.VITE_SUPABASE_URL, env.SUPABASE_URL) ||
-    FALLBACK_SUPABASE_URL,
-  supabasePublishableKey: pickFirst(
-    env.SUPABASE_PUBLISHABLE_DEFAULT_KEY,
-    env.SUPABASE_PUBLISHABLE_KEY,
-    env.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
-    env.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
-    env.VITE_SUPABASE_PUBLISHABLE_KEY
-  ) || FALLBACK_SUPABASE_PUBLISHABLE_KEY
-});
 
 const readRequestBody = (req: any) =>
   new Promise<string>((resolve, reject) => {
@@ -75,12 +56,16 @@ const runNetlifyFunction = async (handler: (event: any) => Promise<any>, req: an
   res.end(response?.body || '');
 };
 
+const sendJson = (res: any, statusCode: number, payload: unknown) => {
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(payload));
+};
+
 export default defineConfig(({ mode }) => {
-  // Fixed: Cast process to any to avoid TypeScript error with process.cwd()
   const env = loadEnv(mode, (process as any).cwd(), '');
   Object.assign(process.env, env);
 
-  const publicRuntimeConfigHandler = null;
   const publicBookingAvailabilityHandler =
     require('./netlify/functions/public-booking-availability-handler.cjs').handler;
   const publicBookingHandler = require('./netlify/functions/public-booking-handler.cjs').handler;
@@ -92,20 +77,19 @@ export default defineConfig(({ mode }) => {
       {
         name: 'public-runtime-config-dev-endpoint',
         configureServer(server) {
-          server.middlewares.use('/api/public-runtime-config', async (req, res) => {
-            if (!process.env.PUBLIC_SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify(createPublicRuntimeConfig(env)));
+          server.middlewares.use('/api/public-runtime-config', async (_req, res) => {
+            const payload = createPublicRuntimeConfig(process.env);
+            const missingFields = getMissingPublicRuntimeConfigFields(payload);
+
+            if (missingFields.length > 0) {
+              sendJson(res, 500, {
+                error: buildMissingPublicRuntimeConfigMessage(missingFields),
+                missingFields,
+              });
               return;
             }
 
-            if (!publicRuntimeConfigHandler) {
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify(createPublicRuntimeConfig(env)));
-              return;
-            }
-
-            await runNetlifyFunction(publicRuntimeConfigHandler, req, res);
+            sendJson(res, 200, payload);
           });
 
           server.middlewares.use('/api/public-booking-availability', (req, res) =>
@@ -119,14 +103,40 @@ export default defineConfig(({ mode }) => {
           server.middlewares.use('/api/invite-staff', (req, res) =>
             runNetlifyFunction(inviteStaffHandler, req, res)
           );
-        }
-      }
+        },
+      },
     ],
     build: {
       outDir: 'dist',
+      chunkSizeWarningLimit: 2000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const normalizedId = id.replace(/\\/g, '/');
+
+            if (!normalizedId.includes('node_modules')) {
+              return undefined;
+            }
+
+            if (normalizedId.includes('mapbox-gl') || normalizedId.includes('react-map-gl')) {
+              return 'mapbox';
+            }
+
+            if (normalizedId.includes('@supabase/')) {
+              return 'supabase';
+            }
+
+            if (normalizedId.includes('gsap')) {
+              return 'animation';
+            }
+
+            return 'vendor';
+          },
+        },
+      },
     },
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-    }
+      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+    },
   };
 });

@@ -16,7 +16,7 @@ export const CustomerDashboard: React.FC = () => {
         if (context?.profile && isMounted) {
           setProfile(context.profile);
         }
-      } catch (e) {
+      } catch {
         // Handle error
       } finally {
         if (isMounted) setIsLoading(false);
@@ -30,7 +30,7 @@ export const CustomerDashboard: React.FC = () => {
     try {
       await signOutCurrentUser();
       navigate('/login');
-    } catch (e) {
+    } catch {
       // 
     }
   };

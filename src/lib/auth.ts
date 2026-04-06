@@ -50,6 +50,8 @@ export interface SessionContext {
   primaryBarbershop: BarbershopRecord | null;
 }
 
+let sessionContextPromise: Promise<SessionContext | null> | null = null;
+
 const PROFILE_SELECT = `
   id,
   email,
@@ -188,7 +190,7 @@ export const getPrimaryBarbershopForProfile = async (
   return null;
 };
 
-export const getCurrentSessionContext = async (): Promise<SessionContext | null> => {
+const buildCurrentSessionContext = async (): Promise<SessionContext | null> => {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -209,6 +211,20 @@ export const getCurrentSessionContext = async (): Promise<SessionContext | null>
     profile,
     primaryBarbershop,
   };
+};
+
+export const clearSessionContextCache = () => {
+  sessionContextPromise = null;
+};
+
+export const getCurrentSessionContext = async (): Promise<SessionContext | null> => {
+  if (!sessionContextPromise) {
+    sessionContextPromise = buildCurrentSessionContext().finally(() => {
+      sessionContextPromise = null;
+    });
+  }
+
+  return sessionContextPromise;
 };
 
 export const getPostAuthRedirectPath = (context: SessionContext): string => {
@@ -242,4 +258,6 @@ export const signOutCurrentUser = async (): Promise<void> => {
   if (error) {
     throw error;
   }
+
+  clearSessionContextCache();
 };

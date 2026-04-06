@@ -1013,7 +1013,12 @@ export const getCustomersData = async (): Promise<{
   }
 
   const customers = Array.from(grouped.values())
-    .map(({ ratingSum: _ratingSum, ratingCount: _ratingCount, ...customer }) => customer)
+    .map((entry) => {
+      const { ratingSum, ratingCount, ...customer } = entry;
+      void ratingSum;
+      void ratingCount;
+      return customer;
+    })
     .sort((a, b) => b.lastVisit.localeCompare(a.lastVisit));
 
   return {
