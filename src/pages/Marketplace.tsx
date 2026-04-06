@@ -18,8 +18,9 @@ import { Link } from 'react-router-dom';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { PublicHeader } from '../components/marketplace/PublicHeader';
-import { MARKETPLACE_BARBERSHOPS, type MarketplaceBarbershop } from '../data/marketplace';
 import { formatDistance, getBoundsForPoints, haversineDistance, loadMapboxToken } from '../lib/mapbox';
+import type { MarketplaceBarbershop } from '../data/marketplace';
+import { getMarketplaceBarbershops } from '../lib/marketplaceApi';
 import { useGeolocation } from '../hooks/useGeolocation';
 
 type MobileView = 'list' | 'map';
@@ -46,9 +47,6 @@ const SORT_OPTIONS: Array<{ id: SortOption; label: string }> = [
   { id: 'price', label: 'Menor preco' },
 ];
 
-const defaultSelectedShopId =
-  MARKETPLACE_BARBERSHOPS.find((shop) => shop.featured)?.id ?? MARKETPLACE_BARBERSHOPS[0].id;
-
 function matchesFilter(shop: ShopWithDistance, filter: FilterOption): boolean {
   switch (filter) {
     case 'all':
@@ -74,11 +72,12 @@ function getRecommendedScore(shop: ShopWithDistance): number {
 }
 
 export const Marketplace: React.FC = () => {
+  const [shops, setShops] = useState<MarketplaceBarbershop[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterOption>('all');
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
   const [hoveredShopId, setHoveredShopId] = useState<string | null>(null);
-  const [selectedShopId, setSelectedShopId] = useState(defaultSelectedShopId);
+  const [selectedShopId, setSelectedShopId] = useState('');
   const [mobileView, setMobileView] = useState<MobileView>('list');
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapboxToken, setMapboxToken] = useState('');
@@ -90,6 +89,29 @@ export const Marketplace: React.FC = () => {
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
 
   const { location: userLocation, status: geoStatus, error: geoError, requestLocation } = useGeolocation();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getMarketplaceBarbershops()
+      .then((data) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setShops(data);
+        setSelectedShopId((current) => current || data[0]?.id || '');
+      })
+      .catch(() => {
+        if (isMounted) {
+          setShops([]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -116,7 +138,7 @@ export const Marketplace: React.FC = () => {
     };
   }, []);
 
-  const shopsWithDistance: ShopWithDistance[] = MARKETPLACE_BARBERSHOPS.map((shop) => ({
+  const shopsWithDistance: ShopWithDistance[] = shops.map((shop) => ({
     ...shop,
     distance: userLocation ? haversineDistance(userLocation, shop.coordinates) : null,
   }));
@@ -175,14 +197,14 @@ export const Marketplace: React.FC = () => {
   }, [filteredShops, selectedShopId]);
 
   useEffect(() => {
-    if (!mapboxToken || !mapContainerRef.current || mapRef.current) return;
+    if (!mapboxToken || !mapContainerRef.current || mapRef.current || shops.length === 0) return;
 
     mapboxgl.accessToken = mapboxToken;
 
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: 'mapbox://styles/mapbox/dark-v11',
-      center: [MARKETPLACE_BARBERSHOPS[0].coordinates.lng, MARKETPLACE_BARBERSHOPS[0].coordinates.lat],
+      center: [shops[0].coordinates.lng, shops[0].coordinates.lat],
       zoom: 12,
       attributionControl: false,
       cooperativeGestures: true,
@@ -193,35 +215,6 @@ export const Marketplace: React.FC = () => {
 
     map.on('load', () => {
       setMapLoaded(true);
-
-      MARKETPLACE_BARBERSHOPS.forEach((shop) => {
-        const el = document.createElement('button');
-        el.type = 'button';
-        el.className = `marketplace-marker${shop.featured ? ' marker-featured' : ''}`;
-        el.setAttribute('aria-label', shop.name);
-        el.innerHTML = `
-          <div class="mkt-marker-badge">${shop.rating.toFixed(1)} &#9733;</div>
-          <div class="mkt-marker-inner">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="6" cy="6" r="3"/><path d="M6 3v18"/><circle cx="18" cy="6" r="3"/><path d="M18 3v7a5 5 0 0 1-5 5H6"/>
-            </svg>
-          </div>
-          <div class="mkt-marker-label">${shop.name}</div>
-        `;
-
-        el.addEventListener('mouseenter', () => setHoveredShopId(shop.id));
-        el.addEventListener('mouseleave', () => setHoveredShopId((current) => (current === shop.id ? null : current)));
-        el.addEventListener('click', () => {
-          setSelectedShopId(shop.id);
-          setMobileView('map');
-        });
-
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
-          .setLngLat([shop.coordinates.lng, shop.coordinates.lat])
-          .addTo(map);
-
-        markersRef.current.set(shop.id, marker);
-      });
     });
 
     mapRef.current = map;
@@ -232,7 +225,43 @@ export const Marketplace: React.FC = () => {
       setMapLoaded(false);
       markersRef.current.clear();
     };
-  }, [mapboxToken]);
+  }, [mapboxToken, shops]);
+
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return;
+
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current.clear();
+
+    shops.forEach((shop) => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = `marketplace-marker${shop.featured ? ' marker-featured' : ''}`;
+      el.setAttribute('aria-label', shop.name);
+      el.innerHTML = `
+        <div class="mkt-marker-badge">${shop.rating.toFixed(1)} &#9733;</div>
+        <div class="mkt-marker-inner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="6" r="3"/><path d="M6 3v18"/><circle cx="18" cy="6" r="3"/><path d="M18 3v7a5 5 0 0 1-5 5H6"/>
+          </svg>
+        </div>
+        <div class="mkt-marker-label">${shop.name}</div>
+      `;
+
+      el.addEventListener('mouseenter', () => setHoveredShopId(shop.id));
+      el.addEventListener('mouseleave', () => setHoveredShopId((current) => (current === shop.id ? null : current)));
+      el.addEventListener('click', () => {
+        setSelectedShopId(shop.id);
+        setMobileView('map');
+      });
+
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([shop.coordinates.lng, shop.coordinates.lat])
+        .addTo(mapRef.current!);
+
+      markersRef.current.set(shop.id, marker);
+    });
+  }, [mapLoaded, shops]);
 
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;

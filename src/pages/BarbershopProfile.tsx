@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -16,8 +16,9 @@ import {
 } from 'lucide-react';
 import { BookingCalendar } from '../components/marketplace/BookingCalendar';
 import { MapboxNavigator } from '../components/map/MapboxNavigator';
-import { getBarbershopBySlug } from '../data/marketplace';
+import type { MarketplaceBarbershop } from '../data/marketplace';
 import { formatDistance, haversineDistance } from '../lib/mapbox';
+import { getMarketplaceBarbershopBySlug } from '../lib/marketplaceApi';
 import { useGeolocation } from '../hooks/useGeolocation';
 
 type BookingStep = 1 | 2 | 3;
@@ -26,15 +27,48 @@ type ProfileTab = 'booking' | 'location' | 'reviews';
 export const BarbershopProfile: React.FC = () => {
   const { slug } = useParams();
   const { location: userLocation, requestLocation } = useGeolocation();
-
-  const shop = getBarbershopBySlug(slug);
-  const [selectedService, setSelectedService] = useState<string | null>(shop.services[0]?.id ?? null);
+  const [shop, setShop] = useState<MarketplaceBarbershop | null>(null);
+  const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
   const [selectedDateTime, setSelectedDateTime] = useState<{ date: Date; time: string } | null>(null);
   const [bookingStep, setBookingStep] = useState<BookingStep>(1);
   const [activeTab, setActiveTab] = useState<ProfileTab>('booking');
   const [liked, setLiked] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getMarketplaceBarbershopBySlug(slug)
+      .then((data) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setShop(data);
+        setSelectedService(data.services[0]?.id ?? null);
+      })
+      .catch(() => {
+        if (isMounted) {
+          setShop(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
+  if (!shop) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#050505] text-slate-100">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-lime-300 border-t-transparent" />
+          <p className="text-sm text-slate-400">Carregando perfil da barbearia...</p>
+        </div>
+      </div>
+    );
+  }
 
   const selectedServiceData = shop.services.find((service) => service.id === selectedService) ?? null;
   const selectedBarberData = shop.barbers.find((barber) => barber.id === selectedBarber) ?? null;

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Mail, Scissors, Store, User } from 'lucide-react';
 import { AuthBackground } from '../components/auth/AuthBackground';
+import { resolvePostAuthRedirectPath } from '../lib/auth';
 import { getSupabaseClient } from '../lib/supabase';
 
 export const Register: React.FC = () => {
@@ -13,6 +14,36 @@ export const Register: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const redirectIfAuthenticated = async () => {
+      try {
+        const supabase = await getSupabaseClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          return;
+        }
+
+        const destination = await resolvePostAuthRedirectPath();
+        if (isMounted) {
+          navigate(destination, { replace: true });
+        }
+      } catch {
+        // Keep the registration form available if the session lookup fails.
+      }
+    };
+
+    void redirectIfAuthenticated();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +69,8 @@ export const Register: React.FC = () => {
       }
 
       if (data.session) {
-        navigate(role === 'OWNER' ? '/onboarding' : '/marketplace');
+        const destination = await resolvePostAuthRedirectPath();
+        navigate(destination, { replace: true });
         return;
       }
 

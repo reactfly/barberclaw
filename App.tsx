@@ -11,6 +11,7 @@ import { AdminSettings } from './src/pages/AdminSettings';
 import { Onboarding } from './src/pages/Onboarding';
 import { Login } from './src/pages/Login';
 import { Register } from './src/pages/Register';
+import { ProtectedRoute } from './src/components/auth/ProtectedRoute';
 
 const App: React.FC = () => {
   return (
@@ -28,15 +29,64 @@ const App: React.FC = () => {
         <Route path="/b/:slug" element={<BarbershopProfile />} />
         
         {/* B2B Routes */}
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/calendar" element={<AdminCalendar />} />
-        <Route path="/admin/customers" element={<AdminCustomers />} />
-        <Route path="/admin/staff" element={<AdminStaff />} />
-        <Route path="/admin/settings" element={<AdminSettings />} />
-        
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute mode="onboarding">
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute mode="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/calendar"
+          element={
+            <ProtectedRoute mode="admin">
+              <AdminCalendar />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/customers"
+          element={
+            <ProtectedRoute mode="admin">
+              <AdminCustomers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/staff"
+          element={
+            <ProtectedRoute mode="admin">
+              <AdminStaff />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <ProtectedRoute mode="admin">
+              <AdminSettings />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Fallback */}
-        <Route path="/admin/*" element={<AdminDashboard />} />
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedRoute mode="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
   );

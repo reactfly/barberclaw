@@ -1,95 +1,111 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Calendar as CalendarIcon, 
-  Users, 
-  Scissors, 
-  Settings, 
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Calendar as CalendarIcon,
+  LayoutDashboard,
   LogOut,
   Menu,
-  X
+  Scissors,
+  Settings,
+  Users,
+  X,
 } from 'lucide-react';
+import { signOutCurrentUser } from '../../lib/auth';
 
 export const AdminSidebar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
 
   const navItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/calendar', icon: CalendarIcon, label: 'Agenda' },
     { path: '/admin/customers', icon: Users, label: 'Clientes' },
-    { path: '/admin/staff', icon: Scissors, label: 'Equipe & Serviços' },
-    { path: '/admin/settings', icon: Settings, label: 'Configurações' },
+    { path: '/admin/staff', icon: Scissors, label: 'Equipe e Servicos' },
+    { path: '/admin/settings', icon: Settings, label: 'Configuracoes' },
   ];
+
+  const isActive = (path: string) => location.pathname === path;
+
+  const handleSignOut = async () => {
+    try {
+      await signOutCurrentUser();
+    } finally {
+      navigate('/login', { replace: true });
+    }
+  };
 
   const SidebarContent = () => (
     <>
-      <div className="p-6 border-b border-white/10 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-white/10 p-6">
         <h1 className="text-xl font-bold tracking-tight">
-          Barber<span className="text-lime-400 font-normal">Flow</span>
-          <span className="text-[10px] uppercase tracking-wider bg-lime-400/20 text-lime-400 ml-2 px-2 py-0.5 rounded-sm">PRO</span>
+          Barber<span className="font-normal text-lime-400">Flow</span>
+          <span className="ml-2 rounded-sm bg-lime-400/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-lime-400">
+            PRO
+          </span>
         </h1>
-        <button onClick={() => setIsOpen(false)} className="md:hidden p-2 text-slate-400 hover:text-white">
-          <X className="w-6 h-6" />
+        <button
+          onClick={() => setIsOpen(false)}
+          className="p-2 text-slate-400 hover:text-white md:hidden"
+        >
+          <X className="h-6 w-6" />
         </button>
       </div>
-      
-      <nav className="flex-1 p-4 flex flex-col gap-2">
+
+      <nav className="flex flex-1 flex-col gap-2 p-4">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = isActive(item.path);
           return (
-            <Link 
+            <Link
               key={item.path}
-              to={item.path} 
+              to={item.path}
               onClick={() => setIsOpen(false)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                active 
-                  ? 'bg-lime-400/10 text-lime-400' 
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 font-medium transition-colors ${
+                isActive(item.path)
+                  ? 'bg-lime-400/10 text-lime-400'
                   : 'text-slate-400 hover:bg-white/5 hover:text-white'
               }`}
             >
-              <Icon className="w-5 h-5" /> {item.label}
+              <Icon className="h-5 w-5" /> {item.label}
             </Link>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-white/10">
-        <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors">
-          <LogOut className="w-5 h-5" /> Sair
-        </Link>
+      <div className="border-t border-white/10 p-4">
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
+        >
+          <LogOut className="h-5 w-5" /> Sair
+        </button>
       </div>
     </>
   );
 
   return (
     <>
-      {/* Mobile Toggle */}
-      <div className="md:hidden fixed top-4 left-4 z-50">
-        <button 
+      <div className="fixed left-4 top-4 z-50 md:hidden">
+        <button
           onClick={() => setIsOpen(true)}
-          className="p-3 bg-[#0a0a0a] border border-white/10 rounded-xl text-white shadow-lg"
+          className="rounded-xl border border-white/10 bg-[#0a0a0a] p-3 text-white shadow-lg"
         >
-          <Menu className="w-6 h-6" />
+          <Menu className="h-6 w-6" />
         </button>
       </div>
 
-      {/* Desktop Sidebar */}
-      <aside className="w-64 border-r border-white/10 bg-[#0a0a0a] flex flex-col hidden md:flex shrink-0 h-screen sticky top-0">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-[#0a0a0a] md:flex">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
       {isOpen && (
         <div className="fixed inset-0 z-[60] md:hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
-          <aside className="absolute inset-y-0 left-0 w-72 bg-[#0a0a0a] border-r border-white/10 flex flex-col animate-slide-in-left">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsOpen(false)}
+          />
+          <aside className="absolute inset-y-0 left-0 flex w-72 flex-col border-r border-white/10 bg-[#0a0a0a] animate-slide-in-left">
             <SidebarContent />
           </aside>
         </div>

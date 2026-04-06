@@ -26,7 +26,9 @@ exports.handler = async () => {
       process.env.SUPABASE_URL
     ),
     supabasePublishableKey: pickFirst(
+      process.env.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
       process.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+      process.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
       process.env.VITE_SUPABASE_PUBLISHABLE_KEY
     )
   };

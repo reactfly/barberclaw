@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Chrome, Lock, LogIn, Mail, Scissors } from 'lucide-react';
 import { AuthBackground } from '../components/auth/AuthBackground';
+import { resolvePostAuthRedirectPath } from '../lib/auth';
 import { getSupabaseClient } from '../lib/supabase';
 
 export const Login: React.FC = () => {
@@ -10,6 +11,45 @@ export const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const stateError = location.state && typeof location.state === 'object' ? location.state.authError : '';
+
+    if (typeof stateError === 'string' && stateError.trim()) {
+      setErrorMessage(stateError);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const redirectIfAuthenticated = async () => {
+      try {
+        const supabase = await getSupabaseClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          return;
+        }
+
+        const destination = await resolvePostAuthRedirectPath();
+        if (isMounted) {
+          navigate(destination, { replace: true });
+        }
+      } catch {
+        // Ignore automatic redirect failures and keep the form visible.
+      }
+    };
+
+    void redirectIfAuthenticated();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,13 +67,12 @@ export const Login: React.FC = () => {
         throw error;
       }
 
-      const role = String(data.user?.user_metadata?.role ?? '').toUpperCase();
-      if (role === 'OWNER' || role === 'ADMIN') {
-        navigate('/admin');
-        return;
+      if (!data.user) {
+        throw new Error('Sua sessao nao foi iniciada corretamente. Tente novamente.');
       }
 
-      navigate('/marketplace');
+      const destination = await resolvePostAuthRedirectPath();
+      navigate(destination, { replace: true });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Nao foi possivel fazer login.');
     } finally {
