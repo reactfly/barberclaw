@@ -20,6 +20,7 @@ View your app in AI Studio: https://ai.studio/apps/358c8ec4-0ab1-4e4e-8d93-d22eb
    - `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` (recommended)
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
    - `SUPABASE_URL` (server-side only)
+   - `SUPABASE_PUBLISHABLE_DEFAULT_KEY` or `SUPABASE_PUBLISHABLE_KEY` (optional aliases for runtime endpoint)
    - `SUPABASE_SERVICE_ROLE_KEY` (preferred for Auth Admin / Netlify Functions)
    - `SUPABASE_SECRET_KEY` (server-side only, never with `VITE_`)
 4. Optionally set `GEMINI_API_KEY` for AI features
@@ -71,6 +72,7 @@ After the migration is applied:
    - `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` (recommended)
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
    - `SUPABASE_URL` (server-side)
+   - `SUPABASE_PUBLISHABLE_DEFAULT_KEY` or `SUPABASE_PUBLISHABLE_KEY` if you prefer server-side aliases for `/api/public-runtime-config`
    - `SUPABASE_SERVICE_ROLE_KEY` (preferred for invite flow and admin server functions)
    - `SUPABASE_SECRET_KEY` (server-side)
 2. Do not expose sensitive keys in frontend variables (for example Supabase secret key).

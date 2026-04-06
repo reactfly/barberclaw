@@ -53,6 +53,17 @@ export const getPublicRuntimeConfig = async (): Promise<PublicRuntimeConfig> => 
 
         const payload = await response.json();
         const config = normalizeConfig(payload);
+        const missingFields = [
+          !config.supabaseUrl ? 'supabaseUrl' : '',
+          !config.supabasePublishableKey ? 'supabasePublishableKey' : '',
+        ].filter(Boolean);
+
+        if (missingFields.length > 0) {
+          throw new Error(
+            `O endpoint /api/public-runtime-config respondeu sem ${missingFields.join(' e ')}. Verifique as variaveis PUBLIC_/VITE_/SUPABASE_ do ambiente.`
+          );
+        }
+
         cachedConfig = config;
         return config;
       })

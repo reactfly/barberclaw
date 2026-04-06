@@ -27,6 +27,8 @@ const createPublicRuntimeConfig = (env: Record<string, string>) => ({
   mapboxToken: pickFirst(env.PUBLIC_MAPBOX_TOKEN, env.VITE_MAPBOX_TOKEN),
   supabaseUrl: pickFirst(env.PUBLIC_SUPABASE_URL, env.VITE_SUPABASE_URL, env.SUPABASE_URL),
   supabasePublishableKey: pickFirst(
+    env.SUPABASE_PUBLISHABLE_DEFAULT_KEY,
+    env.SUPABASE_PUBLISHABLE_KEY,
     env.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
     env.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
