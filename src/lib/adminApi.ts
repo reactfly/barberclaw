@@ -4,10 +4,13 @@ import { getSupabaseClient } from './supabase';
 
 export type MembershipRole = 'owner' | 'manager' | 'barber' | 'assistant';
 export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
+const ADMIN_SELECTED_SHOP_STORAGE_KEY = 'barberflow_admin_selected_shop_id';
 
 export interface AdminContext {
   profile: ProfileRecord;
-  shop: BarbershopRecord;
+  shop: BarbershopRecord | null;
+  availableShops: BarbershopRecord[];
+  isPlatformAdmin: boolean;
   membershipRole: MembershipRole | null;
   canManageShop: boolean;
 }
@@ -157,6 +160,14 @@ type MembershipLookup = {
   role: MembershipRole;
 };
 
+const slugifyValue = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 const isNoRowsError = (error: { code?: string } | null) => error?.code === 'PGRST116';
 const appointmentDateTimeValue = (appointment: AdminAppointment) =>
   `${appointment.appointment_date}T${appointment.start_time}`;
@@ -189,6 +200,27 @@ const getSessionAccessToken = async () => {
   return accessToken;
 };
 
+const readStoredAdminShopId = () => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return window.localStorage.getItem(ADMIN_SELECTED_SHOP_STORAGE_KEY) ?? '';
+};
+
+const storeAdminShopId = (shopId: string | null) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (shopId) {
+    window.localStorage.setItem(ADMIN_SELECTED_SHOP_STORAGE_KEY, shopId);
+    return;
+  }
+
+  window.localStorage.removeItem(ADMIN_SELECTED_SHOP_STORAGE_KEY);
+};
+
 const getCapacityFromHours = (hours: AdminBusinessHour[], date: Date) => {
   const day = hours.find((entry) => entry.day_of_week === date.getDay() && entry.is_open);
   if (!day?.opens_at || !day?.closes_at) {
@@ -207,44 +239,115 @@ export const getAdminContext = async (): Promise<AdminContext> => {
   }
 
   const supabase = await getSupabaseClient();
+  const isPlatformAdmin = session.profile.role === 'admin';
   let shop = session.primaryBarbershop;
   let membershipRole: MembershipRole | null = null;
 
-  const { data: membershipData, error: membershipError } = await supabase
+  const { data: memberships, error: membershipError } = await supabase
     .from('barbershop_memberships')
     .select('shop_id, role')
     .eq('profile_id', session.profile.id)
     .eq('is_active', true)
-    .limit(1)
-    .maybeSingle<MembershipLookup>();
+    .order('created_at', { ascending: true });
 
-  if (membershipError && !isNoRowsError(membershipError)) {
+  if (membershipError) {
     throw membershipError;
   }
 
-  if (membershipData) {
-    membershipRole = membershipData.role;
-    if (!shop) {
-      shop = await getBarbershopById(membershipData.shop_id);
+  const membershipItems = ((memberships ?? []) as MembershipLookup[]);
+  const primaryMembership = membershipItems[0] ?? null;
+  const membershipShopIds = Array.from(new Set(membershipItems.map((item) => item.shop_id)));
+  membershipRole = primaryMembership?.role ?? null;
+
+  const { data: ownedShops, error: ownedShopsError } = await supabase
+    .from('barbershops')
+    .select('*')
+    .eq('owner_id', session.profile.id)
+    .order('name', { ascending: true });
+
+  if (ownedShopsError) {
+    throw ownedShopsError;
+  }
+
+  const { data: membershipShops, error: membershipShopsError } = membershipShopIds.length
+    ? await supabase
+        .from('barbershops')
+        .select('*')
+        .in('id', membershipShopIds)
+        .order('name', { ascending: true })
+    : { data: [], error: null };
+
+  if (membershipShopsError) {
+    throw membershipShopsError;
+  }
+
+  const availableShopsMap = new Map<string, BarbershopRecord>();
+  for (const item of [session.primaryBarbershop, ...(ownedShops ?? []), ...(membershipShops ?? [])]) {
+    if (item?.id) {
+      availableShopsMap.set(item.id, item as BarbershopRecord);
     }
   }
 
-  if (!shop) {
+  const availableShops = Array.from(availableShopsMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name, 'pt-BR')
+  );
+
+  const storedShopId = readStoredAdminShopId();
+  if (!shop && primaryMembership) {
+    shop = await getBarbershopById(primaryMembership.shop_id);
+  }
+
+  if (storedShopId) {
+    const storedShop = availableShops.find((item) => item.id === storedShopId) ?? null;
+    if (storedShop) {
+      shop = storedShop;
+      membershipRole =
+        membershipItems.find((item) => item.shop_id === storedShop.id)?.role ?? membershipRole;
+    }
+  }
+
+  if (!shop && availableShops.length > 0) {
+    shop = availableShops[0];
+    membershipRole =
+      membershipItems.find((item) => item.shop_id === shop?.id)?.role ?? membershipRole;
+  }
+
+  if (!shop && !isPlatformAdmin) {
     throw new Error('Sua conta ainda nao esta vinculada a nenhuma barbearia.');
   }
 
   const canManageShop =
+    isPlatformAdmin ||
     session.profile.role === 'owner' ||
-    session.profile.role === 'admin' ||
     membershipRole === 'owner' ||
     membershipRole === 'manager';
+
+  if (shop) {
+    storeAdminShopId(shop.id);
+  }
 
   return {
     profile: session.profile,
     shop,
+    availableShops,
+    isPlatformAdmin,
     membershipRole,
     canManageShop,
   };
+};
+
+export const switchAdminShop = async (profileId: string, shopId: string): Promise<void> => {
+  storeAdminShopId(shopId);
+
+  const supabase = await getSupabaseClient();
+  const { error } = await supabase
+    .from('profiles')
+    .update({ primary_barbershop_id: shopId || null })
+    .eq('id', profileId);
+
+  if (error) {
+    throw error;
+  }
 };
 
 export const getShopBusinessHours = async (shopId: string): Promise<AdminBusinessHour[]> => {
@@ -373,6 +476,17 @@ export const getDashboardData = async (): Promise<DashboardData> => {
   const context = await getAdminContext();
   const todayDate = format(new Date(), 'yyyy-MM-dd');
 
+  if (!context.shop) {
+    return {
+      context,
+      revenueToday: 0,
+      appointmentsToday: 0,
+      appointmentsCapacity: 0,
+      newCustomersToday: 0,
+      upcomingAppointments: [],
+    };
+  }
+
   const [hours, appointments, services, barbers] = await Promise.all([
     getShopBusinessHours(context.shop.id),
     getShopAppointments(context.shop.id, { fromDate: todayDate, limit: 120 }),
@@ -432,12 +546,97 @@ export const getDashboardData = async (): Promise<DashboardData> => {
 
 export const getSettingsData = async (): Promise<SettingsData> => {
   const context = await getAdminContext();
-  const businessHours = await getShopBusinessHours(context.shop.id);
+  const businessHours = context.shop ? await getShopBusinessHours(context.shop.id) : [];
 
   return {
     context,
     businessHours,
   };
+};
+
+export const createManagedBarbershop = async (payload: {
+  name: string;
+  description: string;
+  phone: string;
+  whatsapp: string;
+  instagramHandle: string;
+  documentNumber: string;
+  postalCode: string;
+  addressLine: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+}): Promise<BarbershopRecord> => {
+  const context = await getAdminContext();
+  const supabase = await getSupabaseClient();
+  const baseSlug = slugifyValue(payload.name) || 'barbearia';
+  let slug = baseSlug;
+  let suffix = 1;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('barbershops')
+      .select('id')
+      .eq('slug', slug)
+      .limit(1)
+      .maybeSingle();
+
+    if (error && !isNoRowsError(error)) {
+      throw error;
+    }
+
+    if (!data) {
+      break;
+    }
+
+    suffix += 1;
+    slug = `${baseSlug}-${suffix}`;
+  }
+
+  const { data: createdShop, error: createError } = await supabase
+    .from('barbershops')
+    .insert({
+      owner_id: context.profile.id,
+      name: payload.name.trim(),
+      slug,
+      description: payload.description.trim() || null,
+      phone: payload.phone.trim() || null,
+      whatsapp: payload.whatsapp.trim() || null,
+      instagram_handle: payload.instagramHandle.trim().replace(/^@+/, '') || null,
+      document_number: payload.documentNumber.trim() || null,
+      postal_code: payload.postalCode.trim() || null,
+      address_line: payload.addressLine.trim(),
+      neighborhood: payload.neighborhood.trim() || null,
+      city: payload.city.trim(),
+      state: payload.state.trim().toUpperCase(),
+      country_code: 'BR',
+      is_active: true,
+    })
+    .select('*')
+    .single<BarbershopRecord>();
+
+  if (createError) {
+    throw createError;
+  }
+
+  const defaultBusinessHours = Array.from({ length: 7 }, (_, dayOfWeek) => ({
+    shop_id: createdShop.id,
+    day_of_week: dayOfWeek,
+    is_open: dayOfWeek !== 0,
+    opens_at: dayOfWeek !== 0 ? '09:00:00' : null,
+    closes_at: dayOfWeek !== 0 ? (dayOfWeek === 6 ? '17:00:00' : '19:00:00') : null,
+  }));
+
+  const { error: businessHoursError } = await supabase
+    .from('business_hours')
+    .insert(defaultBusinessHours);
+
+  if (businessHoursError) {
+    throw businessHoursError;
+  }
+
+  await switchAdminShop(context.profile.id, createdShop.id);
+  return createdShop;
 };
 
 export const saveShopSettings = async (payload: {
@@ -460,6 +659,10 @@ export const saveShopSettings = async (payload: {
   }>;
 }): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione ou cadastre uma barbearia antes de salvar configuracoes.');
+  }
+  const shop = context.shop;
   if (!context.canManageShop) {
     throw new Error('Sua conta possui acesso somente leitura para esta barbearia.');
   }
@@ -481,7 +684,7 @@ export const saveShopSettings = async (payload: {
       city: payload.city.trim(),
       state: payload.state.trim().toUpperCase(),
     })
-    .eq('id', context.shop.id);
+    .eq('id', shop.id);
 
   if (shopError) {
     throw shopError;
@@ -490,14 +693,14 @@ export const saveShopSettings = async (payload: {
   const { error: deleteError } = await supabase
     .from('business_hours')
     .delete()
-    .eq('shop_id', context.shop.id);
+    .eq('shop_id', shop.id);
 
   if (deleteError) {
     throw deleteError;
   }
 
   const cleanedHours = payload.businessHours.map((entry) => ({
-    shop_id: context.shop.id,
+    shop_id: shop.id,
     day_of_week: entry.day_of_week,
     is_open: entry.is_open,
     opens_at: entry.is_open ? entry.opens_at : null,
@@ -512,6 +715,13 @@ export const saveShopSettings = async (payload: {
 
 export const getStaffData = async (): Promise<StaffData> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    return {
+      context,
+      barbers: [],
+      services: [],
+    };
+  }
   const [barbers, services] = await Promise.all([
     getShopBarbers(context.shop.id),
     getShopServices(context.shop.id),
@@ -526,6 +736,9 @@ export const getStaffData = async (): Promise<StaffData> => {
 
 export const inviteStaffMember = async (payload: InviteStaffPayload): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione uma barbearia antes de convidar colaboradores.');
+  }
   if (!context.canManageShop) {
     throw new Error('Sua conta possui acesso somente leitura para esta barbearia.');
   }
@@ -559,6 +772,9 @@ export const createBarber = async (payload: {
   avatarUrl: string;
 }): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione uma barbearia antes de cadastrar profissionais.');
+  }
   if (!context.canManageShop) {
     throw new Error('Sua conta possui acesso somente leitura para esta barbearia.');
   }
@@ -591,6 +807,9 @@ export const updateBarber = async (
   }
 ): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione uma barbearia antes de editar profissionais.');
+  }
   if (!context.canManageShop) {
     throw new Error('Sua conta possui acesso somente leitura para esta barbearia.');
   }
@@ -616,6 +835,9 @@ export const updateBarber = async (
 
 export const deleteBarber = async (barberId: string): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione uma barbearia antes de remover profissionais.');
+  }
   if (!context.canManageShop) {
     throw new Error('Sua conta possui acesso somente leitura para esta barbearia.');
   }
@@ -640,6 +862,9 @@ export const createService = async (payload: {
   badge: string;
 }): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione uma barbearia antes de cadastrar servicos.');
+  }
   if (!context.canManageShop) {
     throw new Error('Sua conta possui acesso somente leitura para esta barbearia.');
   }
@@ -674,6 +899,9 @@ export const updateService = async (
   }
 ): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione uma barbearia antes de editar servicos.');
+  }
   if (!context.canManageShop) {
     throw new Error('Sua conta possui acesso somente leitura para esta barbearia.');
   }
@@ -699,6 +927,9 @@ export const updateService = async (
 
 export const deleteService = async (serviceId: string): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione uma barbearia antes de remover servicos.');
+  }
   if (!context.canManageShop) {
     throw new Error('Sua conta possui acesso somente leitura para esta barbearia.');
   }
@@ -720,6 +951,12 @@ export const getCustomersData = async (): Promise<{
   customers: CustomerSummary[];
 }> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    return {
+      context,
+      customers: [],
+    };
+  }
   const [appointments, reviews, services] = await Promise.all([
     getShopAppointments(context.shop.id, { limit: 1000 }),
     getShopReviews(context.shop.id),
@@ -787,6 +1024,16 @@ export const getCustomersData = async (): Promise<{
 
 export const getCalendarData = async (date: string): Promise<CalendarData> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    return {
+      context,
+      barbers: [],
+      services: [],
+      appointments: [],
+      blockedSlots: [],
+      businessHours: [],
+    };
+  }
   const [barbers, services, appointments, blockedSlots, businessHours] = await Promise.all([
     getShopBarbers(context.shop.id),
     getShopServices(context.shop.id),
@@ -816,6 +1063,9 @@ export const createAppointment = async (payload: {
   notes: string;
 }): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione uma barbearia antes de criar agendamentos.');
+  }
   const service = (await getShopServices(context.shop.id)).find((item) => item.id === payload.serviceId);
 
   if (!service) {
@@ -847,6 +1097,9 @@ export const updateAppointmentStatus = async (
   status: AppointmentStatus
 ): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione uma barbearia antes de atualizar agendamentos.');
+  }
   const supabase = await getSupabaseClient();
   const { error } = await supabase
     .from('appointments')
@@ -867,6 +1120,9 @@ export const createBlockedSlot = async (payload: {
   reason: string;
 }): Promise<void> => {
   const context = await getAdminContext();
+  if (!context.shop) {
+    throw new Error('Selecione uma barbearia antes de bloquear horarios.');
+  }
   if (!context.canManageShop) {
     throw new Error('Sua conta possui acesso somente leitura para esta barbearia.');
   }

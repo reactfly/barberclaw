@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Clock, Loader2, MinusCircle, Plus } from 'lu
 import { addDays, format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AdminSidebar } from '../components/saas/AdminSidebar';
+import { AdminShopSwitcher } from '../components/saas/AdminShopSwitcher';
 import {
   createAppointment,
   createBlockedSlot,
@@ -89,6 +90,7 @@ export const AdminCalendar: React.FC = () => {
   const [blockForm, setBlockForm] = useState<BlockFormState>(DEFAULT_BLOCK_FORM);
   const [isSavingAppointment, setIsSavingAppointment] = useState(false);
   const [isSavingBlock, setIsSavingBlock] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const dateLabel = format(currentDate, "EEEE, d 'de' MMMM", { locale: ptBR });
   const currentDateKey = format(currentDate, 'yyyy-MM-dd');
@@ -117,7 +119,7 @@ export const AdminCalendar: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [currentDateKey]);
+  }, [currentDateKey, reloadKey]);
 
   useEffect(() => {
     setAppointmentForm((current) => ({ ...current, appointmentDate: currentDateKey }));
@@ -261,6 +263,23 @@ export const AdminCalendar: React.FC = () => {
               <Loader2 className="h-8 w-8 animate-spin text-lime-300" />
             </div>
           ) : (
+            <div className="space-y-6">
+              <AdminShopSwitcher
+                context={data?.context ?? null}
+                onShopChanged={() => {
+                  setIsLoading(true);
+                  setReloadKey((current) => current + 1);
+                }}
+              />
+
+              {!data?.context.shop ? (
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
+                  <h3 className="text-2xl font-bold text-white">Nenhuma barbearia selecionada</h3>
+                  <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+                    Escolha uma unidade no seletor acima para liberar agenda, bloqueios e criacao de agendamentos.
+                  </p>
+                </div>
+              ) : (
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
               <section className="min-w-[700px] rounded-3xl border border-white/10 bg-white/5 overflow-hidden">
                 <div className="flex border-b border-white/10 bg-black/20">
@@ -362,6 +381,8 @@ export const AdminCalendar: React.FC = () => {
                   </div>
                 </div>
               </aside>
+            </div>
+              )}
             </div>
           )}
         </div>

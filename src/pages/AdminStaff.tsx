@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit2, Loader2, Plus, Trash2 } from 'lucide-react';
 import { AdminSidebar } from '../components/saas/AdminSidebar';
+import { AdminShopSwitcher } from '../components/saas/AdminShopSwitcher';
 import {
   createBarber,
   createService,
@@ -93,6 +94,7 @@ export const AdminStaff: React.FC = () => {
   const [isSavingBarber, setIsSavingBarber] = useState(false);
   const [isSavingService, setIsSavingService] = useState(false);
   const [isInvitingStaff, setIsInvitingStaff] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const canManageShop = data?.context.canManageShop ?? false;
 
@@ -119,7 +121,7 @@ export const AdminStaff: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   const activeBarbers = useMemo(() => data?.barbers.filter((barber) => barber.is_active) ?? [], [data]);
   const activeServices = useMemo(() => data?.services.filter((service) => service.is_active) ?? [], [data]);
@@ -334,11 +336,29 @@ export const AdminStaff: React.FC = () => {
             </div>
           ) : (
             <>
+              <AdminShopSwitcher
+                context={data?.context ?? null}
+                onShopChanged={() => {
+                  setIsLoading(true);
+                  setReloadKey((current) => current + 1);
+                }}
+              />
+
               {feedback ? (
                 <div className={`rounded-2xl border px-4 py-3 text-sm ${feedback.includes('sucesso') ? 'border-lime-400/40 bg-lime-400/10 text-lime-200' : 'border-red-500/40 bg-red-500/10 text-red-200'}`}>
                   {feedback}
                 </div>
               ) : null}
+
+              {!data?.context.shop ? (
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
+                  <h3 className="text-2xl font-bold text-white">Nenhuma barbearia ativa no workspace</h3>
+                  <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+                    Escolha uma barbearia no seletor acima ou cadastre uma nova unidade em Configuracoes para liberar o gerenciamento de equipe e servicos.
+                  </p>
+                </div>
+              ) : (
+                <>
 
               <section>
                 <div className="mb-4 flex items-center justify-between gap-4">
@@ -444,6 +464,8 @@ export const AdminStaff: React.FC = () => {
                   ))}
                 </div>
               </section>
+                </>
+              )}
             </>
           )}
         </div>

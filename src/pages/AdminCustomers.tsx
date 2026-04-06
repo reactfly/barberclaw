@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Clock, Loader2, Search, Star } from 'lucide-react';
 import { AdminSidebar } from '../components/saas/AdminSidebar';
+import { AdminShopSwitcher } from '../components/saas/AdminShopSwitcher';
 import { getCustomersData, type CustomerSummary } from '../lib/adminApi';
 
 export const AdminCustomers: React.FC = () => {
@@ -8,6 +9,8 @@ export const AdminCustomers: React.FC = () => {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [context, setContext] = useState<Awaited<ReturnType<typeof getCustomersData>>['context'] | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -15,6 +18,7 @@ export const AdminCustomers: React.FC = () => {
     getCustomersData()
       .then((result) => {
         if (isMounted) {
+          setContext(result.context);
           setCustomers(result.customers);
         }
       })
@@ -32,7 +36,7 @@ export const AdminCustomers: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [reloadKey]);
 
   const filteredCustomers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -71,6 +75,23 @@ export const AdminCustomers: React.FC = () => {
             </div>
           ) : (
             <>
+              <AdminShopSwitcher
+                context={context}
+                onShopChanged={() => {
+                  setIsLoading(true);
+                  setReloadKey((current) => current + 1);
+                }}
+              />
+
+              {!context?.shop ? (
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
+                  <h3 className="text-2xl font-bold text-white">Selecione uma barbearia</h3>
+                  <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+                    O administrador global pode alternar entre unidades para analisar a base de clientes de cada operacao.
+                  </p>
+                </div>
+              ) : (
+                <>
               <div className="mb-8 flex gap-4">
                 <div className="relative flex-1 max-w-xl">
                   <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
@@ -145,6 +166,8 @@ export const AdminCustomers: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+                </>
+              )}
             </>
           )}
         </div>
