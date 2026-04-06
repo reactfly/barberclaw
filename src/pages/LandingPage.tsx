@@ -8,7 +8,8 @@ import { Link } from 'react-router-dom';
 import {
   Scissors, Calendar, Sparkles, TrendingUp, MapPin,
   CheckCircle2, ArrowRight, Star, Users, Zap,
-  Shield, BarChart3, Clock, Navigation, Bell, MessageSquare
+  Shield, BarChart3, Clock, Navigation, Bell, MessageSquare,
+  Store, Smartphone, Wallet, Layers3
 } from 'lucide-react';
 import { PublicHeader } from '../components/marketplace/PublicHeader';
 
@@ -82,6 +83,96 @@ const TYPEWRITER_PHRASES = [
 ];
 
 // ── Typewriter hook ─────────────────────────────────────────────────
+
+const SYSTEM_PILLARS = [
+  {
+    icon: Store,
+    title: 'Operacao da barbearia',
+    description:
+      'Cadastre unidades, servicos, profissionais, horarios, bloqueios, clientes e configure toda a rotina da casa em um unico painel.',
+  },
+  {
+    icon: Smartphone,
+    title: 'Experiencia do cliente',
+    description:
+      'Cada cliente agenda online, acompanha o historico, recebe lembretes e volta mais vezes por meio do programa de fidelidade.',
+  },
+  {
+    icon: Wallet,
+    title: 'Financeiro e repasses',
+    description:
+      'Acompanhe faturamento, produtividade, comissoes e os indicadores que normalmente ficam espalhados entre planilhas e conversas.',
+  },
+  {
+    icon: Sparkles,
+    title: 'Diferenciacao com IA',
+    description:
+      'Use o visagismo com inteligencia artificial para elevar o ticket medio, entregar recomendacoes mais confiantes e criar um atendimento memoravel.',
+  },
+];
+
+const PLATFORM_AREAS = [
+  {
+    title: 'Dono e gerencia',
+    subtitle: 'Visao completa do negocio',
+    bullets: [
+      'Painel com agenda, equipe, clientes, servicos e configuracoes',
+      'Indicadores de faturamento, ocupacao e retorno de clientes',
+      'Fluxos para onboarding e expansao da operacao',
+    ],
+  },
+  {
+    title: 'Equipe da barbearia',
+    subtitle: 'Rotina mais organizada',
+    bullets: [
+      'Visualizacao da agenda por dia e profissional',
+      'Controle de repasses e acompanhamento de performance',
+      'Menos mensagens soltas e menos erros de alinhamento',
+    ],
+  },
+  {
+    title: 'Cliente final',
+    subtitle: 'Compra e retorno simplificados',
+    bullets: [
+      'Marketplace para descobrir unidades e profissionais',
+      'Reserva online com disponibilidade real',
+      'Area do cliente com fidelidade, historico e proximos horarios',
+    ],
+  },
+];
+
+const MODULE_SHOWCASE = [
+  {
+    icon: Calendar,
+    name: 'Agenda e disponibilidade',
+    copy: 'Agendamento online, bloqueios, agenda por profissional e visao operacional do dia.',
+  },
+  {
+    icon: Users,
+    name: 'Equipe e comissoes',
+    copy: 'Cadastro de barbeiros, convites de staff, papeis de acesso e acompanhamento de repasses.',
+  },
+  {
+    icon: MapPin,
+    name: 'Marketplace e descoberta',
+    copy: 'Perfil publico da barbearia, geolocalizacao, rotas e captacao de novos clientes.',
+  },
+  {
+    icon: Bell,
+    name: 'Retencao e notificacoes',
+    copy: 'Lembretes de atendimento, gatilhos de retorno e comunicacao automatizada.',
+  },
+  {
+    icon: BarChart3,
+    name: 'Gestao e inteligencia',
+    copy: 'Dados de faturamento, volume de atendimentos, novos clientes e capacidade da operacao.',
+  },
+  {
+    icon: Layers3,
+    name: 'Ecossistema completo',
+    copy: 'Landing, area do cliente, painel admin e funcoes server-side trabalhando no mesmo sistema.',
+  },
+];
 
 function useTypewriter(phrases: string[], typingSpeed = 80, deletingSpeed = 40, pauseTime = 2200) {
   const [displayText, setDisplayText] = useState('');
@@ -370,6 +461,86 @@ export const LandingPage: React.FC = () => {
       {/* ═══════════════════════════════════════════════════════════
           FEATURES BENTO GRID
           ═══════════════════════════════════════════════════════ */}
+      <section className="py-20 md:py-28 relative overflow-hidden bg-[#060906] gsap-reveal">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(163,230,53,0.08),transparent_40%)] pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 relative z-10">
+          <SectionHeader
+            title="Mais do que agenda: um sistema completo"
+            subtitle="O BarberFlow conecta captacao, atendimento, operacao e retencao em uma unica jornada para a barbearia."
+          />
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {SYSTEM_PILLARS.map((pillar) => (
+              <div
+                key={pillar.title}
+                className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-6"
+              >
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-400/10">
+                  <pillar.icon className="h-5 w-5 text-lime-400" />
+                </div>
+                <h3 className="mb-2 text-lg font-semibold text-white">{pillar.title}</h3>
+                <p className="text-sm leading-relaxed text-slate-400">{pillar.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 md:py-24 bg-[#050505] gsap-reveal">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6">
+          <SectionHeader
+            title="Quem ganha com o sistema"
+            subtitle="Cada perfil encontra um fluxo claro dentro da plataforma, sem depender de ferramentas paralelas."
+          />
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {PLATFORM_AREAS.map((area) => (
+              <div
+                key={area.title}
+                className="rounded-3xl border border-white/[0.06] bg-white/[0.02] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
+              >
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-lime-400">
+                  {area.subtitle}
+                </p>
+                <h3 className="mb-5 text-2xl font-semibold text-white">{area.title}</h3>
+                <div className="space-y-4">
+                  {area.bullets.map((bullet) => (
+                    <div key={bullet} className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-lime-400" />
+                      <p className="text-sm leading-relaxed text-slate-400">{bullet}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 md:py-24 bg-[#060706] border-y border-white/[0.05] gsap-reveal">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6">
+          <SectionHeader
+            title="Modulos que trabalham juntos"
+            subtitle="A landing e o painel ficam mais fortes quando o sistema inteiro conversa entre si."
+          />
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {MODULE_SHOWCASE.map((module) => (
+              <div
+                key={module.name}
+                className="rounded-2xl border border-white/[0.06] bg-black/20 p-5 transition-colors hover:border-lime-400/20"
+              >
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04]">
+                  <module.icon className="h-5 w-5 text-lime-400" />
+                </div>
+                <h3 className="mb-2 text-base font-semibold text-white">{module.name}</h3>
+                <p className="text-sm leading-relaxed text-slate-400">{module.copy}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="recursos" className="py-20 md:py-28 relative overflow-hidden gsap-reveal">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] pointer-events-none" />
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-lime-400/10 blur-[160px] rounded-full pointer-events-none" />
