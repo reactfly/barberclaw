@@ -77,6 +77,8 @@ create table if not exists public.barbershops (
   is_active boolean not null default true,
   is_featured boolean not null default false,
   is_premium boolean not null default false,
+  subscription_status text not null default 'trialing',
+  trial_ends_at timestamptz not null default (timezone('utc', now()) + interval '3 days'),
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   constraint barbershops_owner_slug_unique unique (owner_id, slug)

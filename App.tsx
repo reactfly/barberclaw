@@ -13,6 +13,9 @@ import { Login } from './src/pages/Login';
 import { Register } from './src/pages/Register';
 import { CustomerDashboard } from './src/pages/CustomerDashboard';
 import { ProtectedRoute } from './src/components/auth/ProtectedRoute';
+import { PlatformAdminDashboard } from './src/pages/admin-platform/PlatformAdminDashboard';
+import { PlatformAdminModuleScreen } from './src/pages/admin-platform/PlatformAdminModuleScreen';
+import { PlatformAwareAdminPage } from './src/pages/admin-platform/PlatformAwareAdminPage';
 
 const App: React.FC = () => {
   return (
@@ -50,7 +53,7 @@ const App: React.FC = () => {
           path="/admin"
           element={
             <ProtectedRoute mode="admin">
-              <AdminDashboard />
+              <PlatformAwareAdminPage platform={<PlatformAdminDashboard />} shop={<AdminDashboard />} />
             </ProtectedRoute>
           }
         />
@@ -58,7 +61,7 @@ const App: React.FC = () => {
           path="/admin/calendar"
           element={
             <ProtectedRoute mode="admin">
-              <AdminCalendar />
+              <PlatformAwareAdminPage platform={<PlatformAdminModuleScreen forcedModule="bookings" />} shop={<AdminCalendar />} />
             </ProtectedRoute>
           }
         />
@@ -66,7 +69,7 @@ const App: React.FC = () => {
           path="/admin/customers"
           element={
             <ProtectedRoute mode="admin">
-              <AdminCustomers />
+              <PlatformAwareAdminPage platform={<PlatformAdminModuleScreen forcedModule="customers" />} shop={<AdminCustomers />} />
             </ProtectedRoute>
           }
         />
@@ -74,7 +77,7 @@ const App: React.FC = () => {
           path="/admin/staff"
           element={
             <ProtectedRoute mode="admin">
-              <AdminStaff />
+              <PlatformAwareAdminPage platform={<PlatformAdminModuleScreen forcedModule="professionals" />} shop={<AdminStaff />} />
             </ProtectedRoute>
           }
         />
@@ -82,7 +85,16 @@ const App: React.FC = () => {
           path="/admin/settings"
           element={
             <ProtectedRoute mode="admin">
-              <AdminSettings />
+              <PlatformAwareAdminPage platform={<PlatformAdminModuleScreen forcedModule="settings" />} shop={<AdminSettings />} />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/:module"
+          element={
+            <ProtectedRoute mode="admin">
+              <PlatformAdminModuleScreen />
             </ProtectedRoute>
           }
         />

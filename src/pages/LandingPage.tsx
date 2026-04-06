@@ -715,8 +715,17 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-5 sm:px-6 relative z-10">
           <SectionHeader
             title="Planos simples e transparentes"
-            subtitle="Escolha o plano ideal para o momento da sua barbearia."
+            subtitle="Escolha o plano ideal para o momento da sua barbearia após o seu teste."
           />
+
+          <div className="text-center mb-12 animate-fade-in-up">
+            <div className="inline-flex items-center gap-2 rounded-full border border-lime-400/30 bg-lime-400/10 px-5 py-2.5 text-sm font-bold text-lime-400 shadow-[0_0_20px_rgba(163,230,53,0.15)] ring-1 ring-lime-400/50">
+              🎁 Teste de 3 Dias Grátis
+            </div>
+            <p className="text-slate-400 mt-4 max-w-lg mx-auto text-sm leading-relaxed">
+              Crie sua conta agora e ganhe **72 horas automáticas** com absolutamente todas as funções premium liberadas. Não é necessário cartão de crédito para começar!
+            </p>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* Pro Plan */}
@@ -737,17 +746,17 @@ export const LandingPage: React.FC = () => {
               </ul>
               
               <Link to="/onboarding" className="block w-full py-3.5 text-center rounded-xl border border-white/15 hover:bg-white/5 transition-colors font-bold text-sm">
-                Começar Teste Grátis
+                Iniciar Teste (3 Dias)
               </Link>
             </div>
 
             {/* Premium Plan */}
             <div className="bg-lime-400/[0.06] border border-lime-400/30 rounded-2xl p-6 md:p-8 relative flex flex-col">
               <div className="absolute top-0 right-6 -translate-y-1/2 bg-lime-400 text-black px-4 py-1 rounded-full text-xs font-bold shadow-lg">
-                Mais Popular
+                Seu Teste Inicial
               </div>
-              <h3 className="marketplace-fluid-card text-lime-400 mb-1">PREMIUM</h3>
-              <p className="marketplace-copy text-slate-500 text-sm mb-6">Para barbearias que querem escalar.</p>
+              <h3 className="marketplace-fluid-card text-lime-400 mb-1">PREMIUM ILIMITADO</h3>
+              <p className="marketplace-copy text-slate-500 text-sm mb-6">Acesso total automático no seu Teste Grátis.</p>
               <div className="text-4xl font-bold mb-8">
                 R$ 149<span className="text-base text-slate-500 font-normal">/mês</span>
               </div>
@@ -767,8 +776,8 @@ export const LandingPage: React.FC = () => {
                 ))}
               </ul>
               
-              <Link to="/onboarding" className="block w-full py-3.5 text-center rounded-xl bg-lime-400 text-black hover:bg-lime-500 transition-all font-bold text-sm shadow-[0_0_25px_rgba(163,230,53,0.2)]">
-                Começar Teste Grátis
+              <Link to="/onboarding" className="block w-full py-3.5 text-center rounded-xl bg-lime-400 text-black hover:bg-lime-500 transition-all font-bold text-sm shadow-[0_0_30px_rgba(163,230,53,0.3)] hover:scale-[1.02]">
+                Começar Teste de 3 Dias Agora
               </Link>
             </div>
           </div>

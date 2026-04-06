@@ -26,6 +26,36 @@
   status = 200
 
 [[redirects]]
+  from = "/api/platform-plans"
+  to = "/.netlify/functions/platform-plans"
+  status = 200
+
+[[redirects]]
+  from = "/api/platform-transactions"
+  to = "/.netlify/functions/platform-transactions"
+  status = 200
+
+[[redirects]]
+  from = "/api/platform-tickets"
+  to = "/.netlify/functions/platform-tickets"
+  status = 200
+
+[[redirects]]
+  from = "/api/platform-notifications"
+  to = "/.netlify/functions/platform-notifications"
+  status = 200
+
+[[redirects]]
+  from = "/api/platform-content"
+  to = "/.netlify/functions/platform-content"
+  status = 200
+
+[[redirects]]
+  from = "/api/platform-audit-logs"
+  to = "/.netlify/functions/platform-audit-logs"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

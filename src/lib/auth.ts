@@ -38,6 +38,8 @@ export interface BarbershopRecord {
   is_active: boolean;
   is_featured: boolean;
   is_premium: boolean;
+  subscription_status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid';
+  trial_ends_at: string | null;
   created_at?: string;
   updated_at?: string;
 }
